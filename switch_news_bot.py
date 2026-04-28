@@ -1,10 +1,11 @@
 import argparse
 import logging
+import re
 import sqlite3
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, List, Optional
+from typing import Iterable, List, Set
 
 import feedparser
 import requests
@@ -20,6 +21,7 @@ except ImportError:
 TELEGRAM_BOT_TOKEN = environ.get("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = environ.get("TELEGRAM_CHAT_ID")
 DATABASE_PATH = environ.get("DATABASE_PATH", "seen.db")
+TELEGRAM_TOKEN_PATTERN = re.compile(r"^\d+:[A-Za-z0-9_-]{35,}$")
 
 RSS_FEEDS = [
     "https://www.nintenderos.com/feed/",
@@ -119,6 +121,21 @@ def filter_stories(stories: Iterable[Story], keywords: Iterable[str]) -> List[St
     return filtered
 
 
+def deduplicate_stories(stories: Iterable[Story]) -> List[Story]:
+    deduplicated: List[Story] = []
+    seen_keys: Set[str] = set()
+
+    for story in stories:
+        key = story.link.strip() or story.id.strip()
+        if not key or key in seen_keys:
+            continue
+
+        seen_keys.add(key)
+        deduplicated.append(story)
+
+    return deduplicated
+
+
 def get_unsent_stories(conn: sqlite3.Connection, stories: Iterable[Story]) -> List[Story]:
     cursor = conn.cursor()
     unsent: List[Story] = []
@@ -154,18 +171,76 @@ def build_message(story: Story) -> str:
     return "\n".join(parts)
 
 
+def parse_telegram_error(response: requests.Response) -> str:
+    try:
+        data = response.json()
+    except ValueError:
+        return response.text
+
+    description = data.get("description")
+    if description:
+        return description
+
+    return str(data)
+
+
+def validate_telegram_config(token: str, chat_id: str) -> bool:
+    token = token.strip()
+    chat_id = chat_id.strip()
+
+    if not TELEGRAM_TOKEN_PATTERN.match(token):
+        logger.error(
+            "TELEGRAM_BOT_TOKEN no tiene el formato esperado. Revisa el Repository Secret en GitHub Actions."
+        )
+        return False
+
+    if not chat_id:
+        logger.error("TELEGRAM_CHAT_ID está vacío. Revisa el Repository Secret en GitHub Actions.")
+        return False
+
+    try:
+        response = requests.get(f"https://api.telegram.org/bot{token}/getMe", timeout=15)
+    except requests.RequestException as exc:
+        logger.error("No se pudo validar el bot de Telegram con getMe: %s", exc)
+        return False
+
+    if response.status_code == 404:
+        logger.error(
+            "Telegram no reconoce el bot token (404 Not Found). Actualiza TELEGRAM_BOT_TOKEN en los secrets de GitHub."
+        )
+        return False
+
+    if response.status_code != 200:
+        logger.error("Error validando bot de Telegram: %s %s", response.status_code, parse_telegram_error(response))
+        return False
+
+    data = response.json()
+    if not data.get("ok"):
+        logger.error("Telegram rechazó getMe: %s", data)
+        return False
+
+    bot = data.get("result", {})
+    logger.info("Bot de Telegram validado: @%s", bot.get("username", "desconocido"))
+    return True
+
+
 def send_telegram_message(token: str, chat_id: str, text: str) -> bool:
-    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    url = f"https://api.telegram.org/bot{token.strip()}/sendMessage"
     payload = {
-        "chat_id": chat_id,
+        "chat_id": chat_id.strip(),
         "text": text,
         "parse_mode": "Markdown",
         "disable_web_page_preview": False,
     }
 
-    response = requests.post(url, data=payload, timeout=15)
+    try:
+        response = requests.post(url, data=payload, timeout=15)
+    except requests.RequestException as exc:
+        logger.error("Error conectando con Telegram: %s", exc)
+        return False
+
     if response.status_code != 200:
-        logger.error("Error enviando mensaje: %s %s", response.status_code, response.text)
+        logger.error("Error enviando mensaje: %s %s", response.status_code, parse_telegram_error(response))
         return False
 
     data = response.json()
@@ -181,6 +256,9 @@ def run(dry_run: bool = False) -> int:
         logger.error("Falta TELEGRAM_BOT_TOKEN o TELEGRAM_CHAT_ID en el entorno.")
         return 1
 
+    if not dry_run and not validate_telegram_config(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID):
+        return 1
+
     db_path = Path(DATABASE_PATH)
     conn = create_database(str(db_path))
 
@@ -193,6 +271,7 @@ def run(dry_run: bool = False) -> int:
             logger.exception("Error leyendo el feed %s: %s", feed_url, exc)
 
     stories = filter_stories(all_stories, KEYWORDS)
+    stories = deduplicate_stories(stories)
     stories = sorted(stories, key=lambda story: story.published or "", reverse=True)
     unsent_stories = get_unsent_stories(conn, stories)
 

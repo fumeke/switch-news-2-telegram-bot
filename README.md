@@ -57,6 +57,15 @@ Para activarlo en GitHub:
 
 Después de eso, GitHub Actions lo ejecutará cada hora. La base `seen.db` se restaura con cache entre ejecuciones para evitar reenviar noticias ya publicadas.
 
+### Diagnóstico de Telegram en GitHub Actions
+
+Si el log muestra `404 {"ok":false,"error_code":404,"description":"Not Found"}` al llamar a Telegram, casi siempre el `TELEGRAM_BOT_TOKEN` configurado en `Repository secrets` no es válido o está mal copiado.
+
+Revisa en GitHub `Settings` -> `Secrets and variables` -> `Actions`:
+
+- `TELEGRAM_BOT_TOKEN` debe tener formato `123456:ABC...`, sin añadir `bot` delante.
+- `TELEGRAM_CHAT_ID` debe ser el id numérico del chat o canal. Para canales suele empezar por `-100`.
+
 ## Fuentes RSS incluidas
 
 - `https://www.nintenderos.com/feed/`
