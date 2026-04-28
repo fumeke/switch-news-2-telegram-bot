@@ -76,9 +76,9 @@ Revisa en GitHub `Settings` -> `Secrets and variables` -> `Actions`:
 
 ## Filtrado
 
-El bot filtra por palabras clave relacionadas con Switch 2, Nintendo, lanzamientos y juegos exclusivos.
+El bot solo publica noticias cuyo título o resumen mencionen explícitamente `Switch 2`, `Nintendo Switch 2` o `Switch2`. No basta con que aparezcan palabras generales como `Nintendo`, `Mario`, `Zelda`, `Pokemon`, `lanzamiento` o `rumor`.
 
 ## Personalización
 
-- Añade o quita palabras clave en la lista `KEYWORDS` dentro de `switch_news_bot.py`
+- Ajusta `SWITCH_2_PATTERN` dentro de `switch_news_bot.py` si necesitas aceptar otra forma concreta de escribir Nintendo Switch 2.
 - Añade nuevas fuentes RSS a la lista `RSS_FEEDS`

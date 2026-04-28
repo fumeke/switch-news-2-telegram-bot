@@ -36,23 +36,10 @@ RSS_FEEDS = [
     "https://www.eurogamer.es/feed/news",
 ]
 
-KEYWORDS = [
-    "switch 2",
-    "nintendo switch 2",
-    "switch2",
-    "nintendo",
-    "joy-con",
-    "nintendo switch",
-    "switch oled",
-    "lanzamiento",
-    "rumor",
-    "nintendo españa",
-    "metroid prime 4",
-    "mario kart world",
-    "zelda",
-    "mario",
-    "pokemon",
-]
+SWITCH_2_PATTERN = re.compile(
+    r"\b(?:nintendo\s+)?switch\s*[-]?\s*2\b|\bswitch2\b",
+    re.IGNORECASE,
+)
 
 LOG_FORMAT = "%(asctime)s %(levelname)s %(message)s"
 logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
@@ -79,12 +66,11 @@ def create_database(path: str) -> sqlite3.Connection:
 
 
 def normalize_text(text: str) -> str:
-    return text.lower().strip()
+    return " ".join(text.lower().split())
 
 
-def matches_keywords(text: str, keywords: Iterable[str]) -> bool:
-    normalized = normalize_text(text)
-    return any(keyword in normalized for keyword in keywords)
+def mentions_switch_2(text: str) -> bool:
+    return SWITCH_2_PATTERN.search(normalize_text(text)) is not None
 
 
 def fetch_feed(url: str) -> List[Story]:
@@ -112,11 +98,11 @@ def fetch_feed(url: str) -> List[Story]:
     return stories
 
 
-def filter_stories(stories: Iterable[Story], keywords: Iterable[str]) -> List[Story]:
+def filter_stories(stories: Iterable[Story]) -> List[Story]:
     filtered = []
     for story in stories:
         text = f"{story.title} {story.summary}"
-        if matches_keywords(text, keywords):
+        if mentions_switch_2(text):
             filtered.append(story)
     return filtered
 
@@ -270,7 +256,7 @@ def run(dry_run: bool = False) -> int:
         except Exception as exc:
             logger.exception("Error leyendo el feed %s: %s", feed_url, exc)
 
-    stories = filter_stories(all_stories, KEYWORDS)
+    stories = filter_stories(all_stories)
     stories = deduplicate_stories(stories)
     stories = sorted(stories, key=lambda story: story.published or "", reverse=True)
     unsent_stories = get_unsent_stories(conn, stories)
