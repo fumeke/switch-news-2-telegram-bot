@@ -27,6 +27,11 @@ RSS_FEEDS = [
     "https://www.vidaextra.com/feed",
     "https://www.meristation.com/feed",
     "https://news.google.com/rss/search?q=Nintendo+Switch+2+lang:es&hl=es-419&gl=ES",
+    "https://vandal.elespanol.com/xml.cgi?type=noticias&format=feed",
+    "https://www.nintendo.es/news.xml",
+    "https://www.nextn.es/feed/",
+    "https://vandal.elespanol.com/xml.cgi",
+    "https://www.eurogamer.es/feed/news",
 ]
 
 KEYWORDS = [
