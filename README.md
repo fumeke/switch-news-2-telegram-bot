@@ -45,6 +45,18 @@ python3 switch_news_bot.py --dry-run
 
 Puedes ejecutarlo cada hora con GitHub Actions usando el workflow en `.github/workflows/switch-news.yml`.
 
+Para activarlo en GitHub:
+
+1. Sube el proyecto al repositorio, incluyendo `.github/workflows/switch-news.yml`.
+2. En GitHub, entra en `Settings` -> `Secrets and variables` -> `Actions`.
+3. Crea estos `Repository secrets`:
+   - `TELEGRAM_BOT_TOKEN`
+   - `TELEGRAM_CHAT_ID`
+4. Entra en la pestaña `Actions` del repositorio y habilita workflows si GitHub te lo pide.
+5. Ejecuta `Enviar noticias Switch 2 a Telegram` manualmente con `Run workflow` para probarlo.
+
+Después de eso, GitHub Actions lo ejecutará cada hora. La base `seen.db` se restaura con cache entre ejecuciones para evitar reenviar noticias ya publicadas.
+
 ## Fuentes RSS incluidas
 
 - `https://www.nintenderos.com/feed/`
