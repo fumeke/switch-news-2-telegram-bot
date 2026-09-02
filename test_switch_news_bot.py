@@ -277,3 +277,42 @@ def test_calendar_reminder_is_monday_only(tmp_path, monkeypatch):
     tuesday = datetime(2026, 9, 8, 10, 0, tzinfo=ZoneInfo("Europe/Madrid"))
     assert bot.calendar_reminder_is_due(conn, monday)
     assert not bot.calendar_reminder_is_due(conn, tuesday)
+
+
+def test_admin_weekly_stats_include_key_channel_metrics(tmp_path, monkeypatch):
+    monkeypatch.setattr(bot, "ADMIN_CHAT_ID", "999")
+    monkeypatch.setattr(bot, "ADMIN_STATS_HOUR", 22)
+    conn = bot.create_database(str(tmp_path / "stats.db"))
+    item = story("Nintendo confirma una actualización de Switch 2")
+    item.status = "confirmado"
+    item.relevance_score = 9
+    bot.mark_as_sent(conn, item)
+    conn.execute(
+        "INSERT INTO article_feedback (article_key, user_id, rating, created_at) VALUES (?, 'user', 'hot', ?)",
+        (bot.feedback_key(item), int(bot.time.time())),
+    )
+    conn.commit()
+    sunday = datetime(2026, 9, 6, 22, 0, tzinfo=ZoneInfo("Europe/Madrid"))
+    assert bot.admin_stats_is_due(conn, sunday)
+    message = bot.build_admin_weekly_stats(conn, sunday, member_count=250)
+    assert "Suscriptores: <b>250</b>" in message
+    assert "Noticias publicadas: <b>1</b>" in message
+    assert "Confirmadas: 1" in message
+    assert "🔥 1" in message
+    assert "Fuente &amp; Co" in message
+    iso = sunday.isocalendar()
+    bot.set_state(conn, "last_admin_stats", f"{iso.year}-W{iso.week:02d}")
+    assert not bot.admin_stats_is_due(conn, sunday)
+
+
+def test_admin_stats_are_sent_privately_and_store_subscriber_count(tmp_path, monkeypatch):
+    monkeypatch.setattr(bot, "ADMIN_CHAT_ID", "admin-chat")
+    conn = bot.create_database(str(tmp_path / "send-stats.db"))
+    sunday = datetime(2026, 9, 6, 22, 0, tzinfo=ZoneInfo("Europe/Madrid"))
+    monkeypatch.setattr(bot, "local_now", lambda: sunday)
+    monkeypatch.setattr(bot, "get_channel_member_count", lambda: 321)
+    calls = []
+    monkeypatch.setattr(bot, "telegram_request", lambda token, method, payload: calls.append(payload) or True)
+    bot.send_admin_weekly_stats(conn)
+    assert calls[0]["chat_id"] == "admin-chat"
+    assert bot.get_state(conn, "last_subscriber_count") == "321"

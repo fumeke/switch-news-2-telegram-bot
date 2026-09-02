@@ -38,6 +38,7 @@ MORNING_DIGEST_HOUR = int(environ.get("MORNING_DIGEST_HOUR", "9"))
 WEEKLY_DIGEST_HOUR = int(environ.get("WEEKLY_DIGEST_HOUR", "20"))
 CALENDAR_DAYS_AHEAD = int(environ.get("CALENDAR_DAYS_AHEAD", "60"))
 CALENDAR_REMINDER_HOUR = int(environ.get("CALENDAR_REMINDER_HOUR", "10"))
+ADMIN_STATS_HOUR = int(environ.get("ADMIN_STATS_HOUR", "22"))
 CUSTOM_PROMO_TEXT = environ.get("PROMO_TEXT", "")
 PROMO_MESSAGES = (
     "🎮 <b>La actualidad de Nintendo se disfruta más en compañía.</b>\n\n"
@@ -1029,6 +1030,116 @@ def send_weekly_digest(conn: sqlite3.Connection, dry_run: bool = False) -> None:
         set_state(conn, "last_weekly_digest", f"{iso.year}-W{iso.week:02d}")
 
 
+def admin_stats_is_due(conn: sqlite3.Connection, now: datetime) -> bool:
+    iso = now.isocalendar()
+    week_key = f"{iso.year}-W{iso.week:02d}"
+    return (
+        bool(ADMIN_CHAT_ID) and now.weekday() == 6 and now.hour >= ADMIN_STATS_HOUR
+        and get_state(conn, "last_admin_stats") != week_key
+    )
+
+
+def get_channel_member_count():
+    result = telegram_call(TELEGRAM_BOT_TOKEN, "getChatMemberCount", {"chat_id": TELEGRAM_CHAT_ID.strip()})
+    if result is None:
+        return None
+    count = result.get("result")
+    return int(count) if isinstance(count, int) else None
+
+
+def feed_health_summary(conn: sqlite3.Connection) -> tuple:
+    failing = []
+    for config in RSS_FEEDS:
+        key_hash = hashlib.sha256(config.url.encode()).hexdigest()[:12]
+        failures = int(get_state(conn, f"feed_failures:{key_hash}", "0"))
+        if failures:
+            failing.append((config.name, failures))
+    return len(RSS_FEEDS) - len(failing), failing
+
+
+def build_admin_weekly_stats(conn: sqlite3.Connection, now: datetime, member_count=None) -> str:
+    cutoff = int(now.timestamp()) - 7 * 86400
+    total, average, confirmed, rumors, english, complete, partial, failed = conn.execute(
+        "SELECT COUNT(*), COALESCE(AVG(relevance_score), 0), "
+        "SUM(CASE WHEN status = 'confirmado' THEN 1 ELSE 0 END), "
+        "SUM(CASE WHEN status = 'rumor' THEN 1 ELSE 0 END), "
+        "SUM(CASE WHEN language LIKE 'en%' THEN 1 ELSE 0 END), "
+        "SUM(CASE WHEN translation_status = 'complete' THEN 1 ELSE 0 END), "
+        "SUM(CASE WHEN translation_status = 'partial' THEN 1 ELSE 0 END), "
+        "SUM(CASE WHEN translation_status = 'failed' THEN 1 ELSE 0 END) "
+        "FROM sent_articles WHERE created_at >= ?",
+        (cutoff,),
+    ).fetchone()
+    sources = conn.execute(
+        "SELECT source, COUNT(*) FROM sent_articles WHERE created_at >= ? GROUP BY source "
+        "ORDER BY COUNT(*) DESC, source LIMIT 3",
+        (cutoff,),
+    ).fetchall()
+    feedback = dict(conn.execute(
+        "SELECT rating, COUNT(*) FROM article_feedback WHERE created_at >= ? GROUP BY rating", (cutoff,)
+    ).fetchall())
+    top_story = conn.execute(
+        "SELECT title, source, relevance_score FROM sent_articles WHERE created_at >= ? "
+        "ORDER BY relevance_score DESC, created_at DESC LIMIT 1",
+        (cutoff,),
+    ).fetchone()
+    upcoming = conn.execute(
+        "SELECT COUNT(*) FROM releases WHERE release_date >= ? AND release_date <= ?",
+        (now.date().isoformat(), (now.date() + timedelta(days=CALENDAR_DAYS_AHEAD)).isoformat()),
+    ).fetchone()[0]
+    healthy_feeds, failing_feeds = feed_health_summary(conn)
+    parts = [
+        "📈 <b>Estadísticas semanales del canal</b>",
+        f"<i>{(now.date() - timedelta(days=6)).strftime('%d/%m/%Y')} – {now.strftime('%d/%m/%Y')}</i>",
+        "",
+    ]
+    if member_count is not None:
+        previous = int(get_state(conn, "last_subscriber_count", str(member_count)))
+        delta = member_count - previous
+        delta_text = f"{delta:+d}" if delta else "sin cambios"
+        parts.append(f"👥 Suscriptores: <b>{member_count}</b> ({delta_text})")
+    parts.extend([
+        f"📰 Noticias publicadas: <b>{total}</b>",
+        f"🟢 Confirmadas: {confirmed or 0} · 🟡 Rumores: {rumors or 0}",
+        f"⭐ Relevancia media: {float(average):.1f}/10",
+        f"🇬🇧 Noticias inglesas: {english or 0} · Traducción ✅ {complete or 0} / ◐ {partial or 0} / ❌ {failed or 0}",
+        f"💬 Valoraciones: 🔥 {feedback.get('hot', 0)} · 👍 {feedback.get('useful', 0)} · 👎 {feedback.get('low', 0)}",
+        f"🗓 Próximos lanzamientos registrados: {upcoming}",
+        f"📡 Feeds operativos: {healthy_feeds}/{len(RSS_FEEDS)}",
+    ])
+    if sources:
+        parts.extend(["", "<b>Fuentes más publicadas</b>"])
+        parts.extend(f"• {html.escape(source)}: {count}" for source, count in sources)
+    if top_story:
+        parts.extend([
+            "", "<b>Noticia con mayor puntuación</b>",
+            f"• {html.escape(top_story[0])} · {html.escape(top_story[1])} ({top_story[2]}/10)",
+        ])
+    if failing_feeds:
+        parts.extend(["", "<b>Feeds con incidencias</b>"])
+        parts.extend(f"• {html.escape(name)}: {failures} fallos consecutivos" for name, failures in failing_feeds)
+    return "\n".join(parts)
+
+
+def send_admin_weekly_stats(conn: sqlite3.Connection, dry_run: bool = False) -> None:
+    now = local_now()
+    if not admin_stats_is_due(conn, now):
+        return
+    member_count = None if dry_run else get_channel_member_count()
+    message = build_admin_weekly_stats(conn, now, member_count=member_count)
+    if dry_run:
+        logger.info("Dry-run de las estadísticas del administrador:\n%s", message)
+        return
+    if telegram_request(TELEGRAM_BOT_TOKEN, "sendMessage", {
+        "chat_id": ADMIN_CHAT_ID.strip(), "text": message, "parse_mode": "HTML",
+        "disable_web_page_preview": "true",
+    }):
+        iso = now.isocalendar()
+        set_state(conn, "last_admin_stats", f"{iso.year}-W{iso.week:02d}")
+        if member_count is not None:
+            set_state(conn, "last_subscriber_count", str(member_count))
+
+
 def run(dry_run: bool = False) -> int:
     if not dry_run and (not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID):
         logger.error("Falta TELEGRAM_BOT_TOKEN o TELEGRAM_CHAT_ID en el entorno.")
@@ -1096,6 +1207,7 @@ def run(dry_run: bool = False) -> int:
     send_daily_promo(conn, dry_run=dry_run)
     send_calendar_reminder(conn, dry_run=dry_run)
     sync_release_calendar(conn, dry_run=dry_run)
+    send_admin_weekly_stats(conn, dry_run=dry_run)
     conn.close()
     return 0
 

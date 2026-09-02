@@ -30,6 +30,7 @@ Agregador de noticias para Telegram con fuentes españolas e internacionales, tr
 - Resumen semanal con las cinco noticias más relevantes.
 - Resumen matinal con las tres noticias más importantes del día anterior.
 - Calendario fijado con lanzamientos confirmados de los próximos 60 días.
+- Informe privado dominical con las estadísticas principales del canal.
 - Pruebas automáticas en cada push y pull request de GitHub.
 
 Las etiquetas son una clasificación heurística: `Confirmado` indica que el texto contiene señales explícitas de confirmación oficial; no sustituye una comprobación editorial.
@@ -57,6 +58,7 @@ WEEKLY_DIGEST_HOUR=20
 MORNING_DIGEST_HOUR=9
 CALENDAR_DAYS_AHEAD=60
 CALENDAR_REMINDER_HOUR=10
+ADMIN_STATS_HOUR=22
 ```
 
 `TRANSLATION_ENABLED=false` conserva el texto original. Si el servicio de traducción no está disponible, el bot publica el original y continúa procesando el resto.
@@ -74,6 +76,10 @@ A partir de `MORNING_DIGEST_HOUR`, el bot publica una sola vez las tres noticias
 El bot detecta fechas completas asociadas explícitamente a un lanzamiento de Switch 2, siempre que la noticia no sea un rumor y la fuente tenga fiabilidad suficiente. Conserva los datos en la tabla `releases` y muestra los próximos `CALENDAR_DAYS_AHEAD` días.
 
 El calendario es un único mensaje que se edita solamente cuando cambia el contenido. Al crearlo, el bot intenta fijarlo en el canal; para ello necesita permiso de administrador para fijar mensajes. Cada lunes, a partir de `CALENDAR_REMINDER_HOUR`, publica un recordatorio breve para consultar el calendario fijado. Las expresiones imprecisas como “próximamente” o “este otoño” no se incorporan.
+
+## Estadísticas del administrador
+
+Cada domingo, a partir de `ADMIN_STATS_HOUR`, el bot envía a `ADMIN_CHAT_ID` un informe privado con suscriptores y variación semanal, publicaciones, confirmaciones y rumores, relevancia media, traducciones, valoraciones, fuentes más utilizadas, noticia principal, próximos lanzamientos y salud de los feeds. Si Telegram no permite consultar el número de miembros, el resto del informe se envía igualmente. SQLite registra la semana para evitar duplicados.
 
 ## Instalación y uso
 
