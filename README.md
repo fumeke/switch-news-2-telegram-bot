@@ -20,6 +20,7 @@ Agregador de noticias para Telegram con fuentes españolas e internacionales, tr
 - Descarte de artículos con más de 48 horas y orden cronológico normalizado.
 - Detección de coberturas duplicadas aunque procedan de medios y URL diferentes.
 - Botones para abrir y compartir cada noticia directamente desde Telegram.
+- Enlace de lectura únicamente como botón, sin repetirlo dentro del mensaje.
 - Prioridad editorial según la fiabilidad de cada fuente.
 - Resúmenes limpios de un máximo de dos frases.
 - Especial automático que agrupa los anuncios de un Nintendo Direct.
@@ -27,6 +28,8 @@ Agregador de noticias para Telegram con fuentes españolas e internacionales, tr
 - Rotación de mensajes promocionales para evitar repeticiones.
 - Alertas privadas cuando un feed falla reiteradamente y aviso cuando se recupera.
 - Resumen semanal con las cinco noticias más relevantes.
+- Resumen matinal con las tres noticias más importantes del día anterior.
+- Calendario fijado con lanzamientos confirmados de los próximos 60 días.
 - Pruebas automáticas en cada push y pull request de GitHub.
 
 Las etiquetas son una clasificación heurística: `Confirmado` indica que el texto contiene señales explícitas de confirmación oficial; no sustituye una comprobación editorial.
@@ -51,6 +54,9 @@ CHANNEL_TIMEZONE=Europe/Madrid
 PROMO_HOUR=21
 PROMO_TEXT=¿Tienes un amigo que vive pendiente de Switch 2? Envíale este canal y que no se pierda la próxima gran noticia.
 WEEKLY_DIGEST_HOUR=20
+MORNING_DIGEST_HOUR=9
+CALENDAR_DAYS_AHEAD=60
+CALENDAR_REMINDER_HOUR=10
 ```
 
 `TRANSLATION_ENABLED=false` conserva el texto original. Si el servicio de traducción no está disponible, el bot publica el original y continúa procesando el resto.
@@ -60,6 +66,14 @@ Las traducciones de titular y resumen se realizan por separado: si una falla, se
 El mensaje promocional se envía una sola vez al día al final de la primera ejecución a partir de `PROMO_HOUR` en `CHANNEL_TIMEZONE`. Si no se define `PROMO_TEXT`, el bot rota automáticamente entre cuatro mensajes. La fecha del último envío queda guardada en SQLite, por lo que un reintento de GitHub Actions no lo duplica. `PROMO_TEXT` admite el HTML compatible con Telegram.
 
 Los domingos, a partir de `WEEKLY_DIGEST_HOUR`, se publica un resumen con las cinco noticias de mayor relevancia de los últimos siete días.
+
+A partir de `MORNING_DIGEST_HOUR`, el bot publica una sola vez las tres noticias con mayor relevancia del día anterior y cierra con “¡A ver qué nos trae hoy Nintendo Switch 2!”. Los enlaces aparecen únicamente en botones.
+
+## Calendario de lanzamientos
+
+El bot detecta fechas completas asociadas explícitamente a un lanzamiento de Switch 2, siempre que la noticia no sea un rumor y la fuente tenga fiabilidad suficiente. Conserva los datos en la tabla `releases` y muestra los próximos `CALENDAR_DAYS_AHEAD` días.
+
+El calendario es un único mensaje que se edita solamente cuando cambia el contenido. Al crearlo, el bot intenta fijarlo en el canal; para ello necesita permiso de administrador para fijar mensajes. Cada lunes, a partir de `CALENDAR_REMINDER_HOUR`, publica un recordatorio breve para consultar el calendario fijado. Las expresiones imprecisas como “próximamente” o “este otoño” no se incorporan.
 
 ## Instalación y uso
 

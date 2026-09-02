@@ -9,7 +9,7 @@ import sqlite3
 import time
 import unicodedata
 from dataclasses import dataclass, replace
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from difflib import SequenceMatcher
 from os import environ
 from pathlib import Path
@@ -34,7 +34,10 @@ DUPLICATE_SIMILARITY = float(environ.get("DUPLICATE_SIMILARITY", "0.76"))
 CHANNEL_TIMEZONE = environ.get("CHANNEL_TIMEZONE", "Europe/Madrid")
 ADMIN_CHAT_ID = environ.get("ADMIN_CHAT_ID", "")
 PROMO_HOUR = int(environ.get("PROMO_HOUR", "21"))
+MORNING_DIGEST_HOUR = int(environ.get("MORNING_DIGEST_HOUR", "9"))
 WEEKLY_DIGEST_HOUR = int(environ.get("WEEKLY_DIGEST_HOUR", "20"))
+CALENDAR_DAYS_AHEAD = int(environ.get("CALENDAR_DAYS_AHEAD", "60"))
+CALENDAR_REMINDER_HOUR = int(environ.get("CALENDAR_REMINDER_HOUR", "10"))
 CUSTOM_PROMO_TEXT = environ.get("PROMO_TEXT", "")
 PROMO_MESSAGES = (
     "🎮 <b>La actualidad de Nintendo se disfruta más en compañía.</b>\n\n"
@@ -98,6 +101,20 @@ CONFIRMED_TERMS = re.compile(
     re.I,
 )
 DIRECT_TERMS = re.compile(r"\bnintendo\s+direct\b|\bdirect\s+de\s+nintendo\b", re.I)
+RELEASE_TERMS = re.compile(
+    r"\b(?:release date|launch(?:es|ing)?|releases?|fecha de lanzamiento|se lanza|llega(?:rá)?|sale a la venta)\b",
+    re.I,
+)
+MONTHS = {
+    "january": 1, "enero": 1, "february": 2, "febrero": 2, "march": 3, "marzo": 3,
+    "april": 4, "abril": 4, "may": 5, "mayo": 5, "june": 6, "junio": 6,
+    "july": 7, "julio": 7, "august": 8, "agosto": 8, "september": 9, "septiembre": 9,
+    "october": 10, "octubre": 10, "november": 11, "noviembre": 11, "december": 12, "diciembre": 12,
+}
+SPANISH_MONTH_NAMES = {
+    1: "enero", 2: "febrero", 3: "marzo", 4: "abril", 5: "mayo", 6: "junio",
+    7: "julio", 8: "agosto", 9: "septiembre", 10: "octubre", 11: "noviembre", 12: "diciembre",
+}
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
@@ -146,6 +163,10 @@ def create_database(path: str) -> sqlite3.Connection:
     conn.execute(
         "CREATE TABLE IF NOT EXISTS translation_cache (story_id TEXT PRIMARY KEY, title TEXT, summary TEXT, "
         "status TEXT, created_at INTEGER)"
+    )
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS releases (release_key TEXT PRIMARY KEY, name TEXT NOT NULL, "
+        "release_date TEXT NOT NULL, source TEXT, link TEXT, updated_at INTEGER)"
     )
     conn.commit()
     return conn
@@ -207,6 +228,92 @@ def concise_summary(text: str, max_length: int = 340) -> str:
         return selected
     shortened = selected[:max_length].rsplit(" ", 1)[0].rstrip(" ,;:")
     return shortened + "…"
+
+
+def parse_release_date(text: str):
+    months = "|".join(sorted(MONTHS, key=len, reverse=True))
+    patterns = (
+        rf"\b(\d{{1,2}})(?:st|nd|rd|th)?(?:\s+de)?\s+({months})\s+(?:de\s+)?(20\d{{2}})\b",
+        rf"\b({months})\s+(\d{{1,2}})(?:st|nd|rd|th)?(?:,)?\s+(20\d{{2}})\b",
+    )
+    for index, pattern in enumerate(patterns):
+        match = re.search(pattern, text, re.I)
+        if not match:
+            continue
+        if index == 0:
+            day, month_name, year = match.groups()
+        else:
+            month_name, day, year = match.groups()
+        try:
+            return datetime(int(year), MONTHS[month_name.lower()], int(day)).date()
+        except ValueError:
+            return None
+    return None
+
+
+def release_name_from_title(title: str) -> str:
+    cleaned = re.sub(r"^(?:confirmed|confirmado|oficial|noticia)[:\s-]+", "", clean_text(title), flags=re.I)
+    review_match = re.search(
+        r"\breviews?\s+for\s+(.+?)\s+on\s+(?:nintendo\s+)?switch\b", cleaned, re.I
+    )
+    if review_match:
+        return review_match.group(1).strip(" :-–—")[:160]
+    review_title = re.match(r"^(?:review|análisis|preview)[:\s-]+(.+?)(?:\s+\(|\s+-|$)", cleaned, re.I)
+    if review_title:
+        return review_title.group(1).strip(" :-–—")[:160]
+    prefix = re.split(
+        r"\b(?:launches|releases|arrives|release date|llega(?:rá)?|se lanza|sale a la venta|fecha de lanzamiento)\b",
+        cleaned,
+        maxsplit=1,
+        flags=re.I,
+    )[0].strip(" :-–—")
+    return (prefix if len(prefix) >= 3 else cleaned)[:160]
+
+
+def extract_release(story: Story, today=None):
+    if story.status == "rumor" or story.reliability < 2:
+        return None
+    complete_text = f"{story.title} {story.summary}"
+    if not any(pattern.search(complete_text) for pattern, _ in SWITCH_2_TERMS):
+        return None
+    segments = [story.title, *re.split(r"(?<=[.!?])\s+", story.summary)]
+    release_date = next(
+        (parse_release_date(segment) for segment in segments if RELEASE_TERMS.search(segment) and parse_release_date(segment)),
+        None,
+    )
+    if not release_date:
+        return None
+    today = today or local_now().date()
+    if release_date < today or release_date > today + timedelta(days=365):
+        return None
+    name = release_name_from_title(story.title)
+    key = hashlib.sha256(title_key(name).encode()).hexdigest()[:20]
+    return key, name, release_date.isoformat(), story.source, story.link
+
+
+def update_releases(conn: sqlite3.Connection, stories: Iterable[Story], today=None) -> bool:
+    changed = False
+    for story in stories:
+        release = extract_release(story, today=today)
+        if not release:
+            continue
+        key, name, release_date, source, link = release
+        existing = conn.execute(
+            "SELECT name, release_date, source, link FROM releases WHERE release_key = ?", (key,)
+        ).fetchone()
+        values = (name, release_date, source, link)
+        if existing != values:
+            conn.execute(
+                "INSERT INTO releases (release_key, name, release_date, source, link, updated_at) "
+                "VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(release_key) DO UPDATE SET name = excluded.name, "
+                "release_date = excluded.release_date, source = excluded.source, link = excluded.link, "
+                "updated_at = excluded.updated_at",
+                (key, name, release_date, source, link, int(time.time())),
+            )
+            changed = True
+    if changed:
+        conn.commit()
+    return changed
 
 
 def extract_image(entry) -> str:
@@ -488,7 +595,6 @@ def build_message(story: Story) -> str:
                 "not_needed": "🇬🇧 <i>La noticia original está en inglés.</i>",
             }
             parts.extend(["", translation_notes.get(story.translation_status, translation_notes["not_needed"])])
-        parts.extend(["", f'<a href="{html.escape(story.link, quote=True)}">Leer noticia completa →</a>'])
     return "\n".join(parts)[:1024 if story.image_url else 4096]
 
 
@@ -499,20 +605,24 @@ def parse_telegram_error(response: requests.Response) -> str:
         return response.text
 
 
-def telegram_request(token: str, method: str, payload: dict) -> bool:
+def telegram_call(token: str, method: str, payload: dict):
     try:
         response = requests.post(f"https://api.telegram.org/bot{token.strip()}/{method}", data=payload, timeout=20)
     except requests.RequestException as exc:
         logger.error("Error conectando con Telegram: %s", exc)
-        return False
+        return None
     try:
         ok = response.status_code == 200 and response.json().get("ok")
     except ValueError:
         ok = False
     if not ok:
         logger.error("Error de Telegram: %s %s", response.status_code, parse_telegram_error(response))
-        return False
-    return True
+        return None
+    return response.json()
+
+
+def telegram_request(token: str, method: str, payload: dict) -> bool:
+    return telegram_call(token, method, payload) is not None
 
 
 def validate_telegram_config(token: str, chat_id: str) -> bool:
@@ -746,6 +856,153 @@ def weekly_digest_is_due(conn: sqlite3.Connection, now: datetime) -> bool:
     return now.weekday() == 6 and now.hour >= WEEKLY_DIGEST_HOUR and get_state(conn, "last_weekly_digest") != week_key
 
 
+def morning_digest_is_due(conn: sqlite3.Connection, now: datetime) -> bool:
+    return now.hour >= MORNING_DIGEST_HOUR and get_state(conn, "last_morning_digest") != now.date().isoformat()
+
+
+def previous_day_bounds(now: datetime) -> tuple:
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    yesterday_start = today_start - timedelta(days=1)
+    return int(yesterday_start.timestamp()), int(today_start.timestamp())
+
+
+def build_morning_digest(rows: list) -> str:
+    parts = ["☕ <b>Las 3 noticias más importantes de ayer</b>", ""]
+    for index, (title, link, source, score) in enumerate(rows, 1):
+        parts.append(f"{index}. <b>{html.escape(title)}</b> · {html.escape(source)}")
+    parts.extend(["", "🎮 Comienza una nueva jornada. ¡A ver qué nos trae hoy Nintendo Switch 2!"])
+    return "\n".join(parts)
+
+
+def send_morning_digest(conn: sqlite3.Connection, dry_run: bool = False) -> None:
+    now = local_now()
+    if not morning_digest_is_due(conn, now):
+        return
+    start, end = previous_day_bounds(now)
+    rows = conn.execute(
+        "SELECT title, link, source, relevance_score FROM sent_articles "
+        "WHERE created_at >= ? AND created_at < ? AND link IS NOT NULL AND link != '' "
+        "ORDER BY relevance_score DESC, created_at DESC LIMIT 3",
+        (start, end),
+    ).fetchall()
+    if not rows:
+        return
+    message = build_morning_digest(rows)
+    keyboard = {"inline_keyboard": [[
+        {"text": f"{index}️⃣ Leer noticia", "url": row[1]}
+    ] for index, row in enumerate(rows, 1)]}
+    if dry_run:
+        logger.info("Dry-run del resumen de ayer:\n%s", message)
+        return
+    if telegram_request(TELEGRAM_BOT_TOKEN, "sendMessage", {
+        "chat_id": TELEGRAM_CHAT_ID.strip(), "text": message, "parse_mode": "HTML",
+        "disable_web_page_preview": "true", "reply_markup": json.dumps(keyboard),
+    }):
+        set_state(conn, "last_morning_digest", now.date().isoformat())
+
+
+def calendar_rows(conn: sqlite3.Connection, today=None) -> list:
+    today = today or local_now().date()
+    end = today + timedelta(days=CALENDAR_DAYS_AHEAD)
+    return conn.execute(
+        "SELECT name, release_date, source, link FROM releases WHERE release_date >= ? AND release_date <= ? "
+        "ORDER BY release_date, name",
+        (today.isoformat(), end.isoformat()),
+    ).fetchall()
+
+
+def build_release_calendar(rows: list, now: datetime) -> str:
+    parts = ["🗓 <b>Próximos lanzamientos para Nintendo Switch 2</b>"]
+    current_month = None
+    for name, release_date, source, link in rows:
+        parsed = datetime.strptime(release_date, "%Y-%m-%d").date()
+        month_key = (parsed.year, parsed.month)
+        if month_key != current_month:
+            parts.extend(["", f"<b>{SPANISH_MONTH_NAMES[parsed.month].capitalize()} {parsed.year}</b>"])
+            current_month = month_key
+        parts.append(f"• {parsed.day} de {SPANISH_MONTH_NAMES[parsed.month]} — {html.escape(name)} · {html.escape(source)}")
+    parts.extend([
+        "", "✅ Solo fechas confirmadas",
+        f"🔄 Actualizado: {now.strftime('%d/%m/%Y %H:%M')}",
+    ])
+    return "\n".join(parts)[:4096]
+
+
+def calendar_keyboard(rows: list) -> dict:
+    return {"inline_keyboard": [[
+        {"text": f"🎮 {name[:45]}", "url": link}
+    ] for name, release_date, source, link in rows[:10] if link]}
+
+
+def sync_release_calendar(conn: sqlite3.Connection, dry_run: bool = False) -> None:
+    now = local_now()
+    rows = calendar_rows(conn, today=now.date())
+    if not rows:
+        return
+    keyboard = calendar_keyboard(rows)
+    content_hash = hashlib.sha256(json.dumps([rows, keyboard], sort_keys=True).encode()).hexdigest()
+    if get_state(conn, "calendar_content_hash") == content_hash:
+        return
+    message = build_release_calendar(rows, now)
+    if dry_run:
+        logger.info("Dry-run del calendario de lanzamientos:\n%s", message)
+        return
+    message_id = get_state(conn, "calendar_message_id")
+    common = {
+        "chat_id": TELEGRAM_CHAT_ID.strip(), "text": message, "parse_mode": "HTML",
+        "disable_web_page_preview": "true", "reply_markup": json.dumps(keyboard),
+    }
+    if message_id:
+        result = telegram_call(TELEGRAM_BOT_TOKEN, "editMessageText", {**common, "message_id": message_id})
+        if result is None:
+            failures = int(get_state(conn, "calendar_edit_failures", "0")) + 1
+            set_state(conn, "calendar_edit_failures", str(failures))
+            if failures >= 3:
+                set_state(conn, "calendar_message_id", "")
+                notify_admin("No se pudo editar el calendario tras tres intentos; se recreará en la próxima ejecución.")
+            return
+    else:
+        result = telegram_call(TELEGRAM_BOT_TOKEN, "sendMessage", {**common, "disable_notification": "true"})
+        if result is None:
+            return
+        message_id = str(result.get("result", {}).get("message_id", ""))
+        if not message_id:
+            return
+        set_state(conn, "calendar_message_id", message_id)
+        if not telegram_request(TELEGRAM_BOT_TOKEN, "pinChatMessage", {
+            "chat_id": TELEGRAM_CHAT_ID.strip(), "message_id": message_id, "disable_notification": "true",
+        }):
+            notify_admin("El calendario se creó, pero no pudo fijarse. Revisa el permiso para fijar mensajes.")
+    set_state(conn, "calendar_edit_failures", "0")
+    set_state(conn, "calendar_content_hash", content_hash)
+
+
+def calendar_reminder_is_due(conn: sqlite3.Connection, now: datetime) -> bool:
+    iso = now.isocalendar()
+    week_key = f"{iso.year}-W{iso.week:02d}"
+    return (
+        now.weekday() == 0 and now.hour >= CALENDAR_REMINDER_HOUR
+        and bool(get_state(conn, "calendar_message_id"))
+        and get_state(conn, "last_calendar_reminder") != week_key
+    )
+
+
+def send_calendar_reminder(conn: sqlite3.Connection, dry_run: bool = False) -> None:
+    now = local_now()
+    if not calendar_reminder_is_due(conn, now):
+        return
+    message = "🗓 <b>Calendario actualizado</b>\n\nConsulta en el mensaje fijado los próximos lanzamientos confirmados para Nintendo Switch 2."
+    if dry_run:
+        logger.info("Dry-run del recordatorio del calendario:\n%s", message)
+        return
+    if telegram_request(TELEGRAM_BOT_TOKEN, "sendMessage", {
+        "chat_id": TELEGRAM_CHAT_ID.strip(), "text": message, "parse_mode": "HTML",
+        "disable_web_page_preview": "true",
+    }):
+        iso = now.isocalendar()
+        set_state(conn, "last_calendar_reminder", f"{iso.year}-W{iso.week:02d}")
+
+
 def send_weekly_digest(conn: sqlite3.Connection, dry_run: bool = False) -> None:
     now = local_now()
     if not weekly_digest_is_due(conn, now):
@@ -800,6 +1057,13 @@ def run(dry_run: bool = False) -> int:
     if not dry_run:
         record_news_activity(conn, bool(stories))
     stories.sort(key=lambda story: story.published_timestamp, reverse=True)
+    release_stories = []
+    for story in stories:
+        if extract_release(story):
+            release_stories.append(
+                translate_story(story, conn) if not story.language.lower().startswith("es") else story
+            )
+    update_releases(conn, release_stories)
     candidates = smart_deduplicate_stories(get_unsent_stories(conn, stories))[:MAX_ARTICLES_PER_RUN * 2]
     translated = [translate_story(story, conn) for story in candidates]
     international = [story for story in candidates if not story.language.lower().startswith("es")]
@@ -827,8 +1091,11 @@ def run(dry_run: bool = False) -> int:
             notify_admin(f"No se pudo publicar la noticia: {story.title}\n{story.link}")
     if not unsent:
         logger.info("No hay noticias nuevas para enviar.")
+    send_morning_digest(conn, dry_run=dry_run)
     send_weekly_digest(conn, dry_run=dry_run)
     send_daily_promo(conn, dry_run=dry_run)
+    send_calendar_reminder(conn, dry_run=dry_run)
+    sync_release_calendar(conn, dry_run=dry_run)
     conn.close()
     return 0
 

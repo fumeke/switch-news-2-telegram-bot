@@ -28,8 +28,9 @@ def test_message_uses_safe_html():
     item.relevance_score = 8
     message = bot.build_message(item)
     assert "&lt;Pro&gt; &amp; novedades" in message
-    assert "a=1&amp;b=2" in message
     assert "Fuente &amp; Co" in message
+    assert "Leer noticia completa" not in message
+    assert item.link not in message
 
 
 def test_database_migrates_old_schema(tmp_path):
@@ -48,7 +49,7 @@ def test_database_migrates_old_schema(tmp_path):
         "translation_status",
     } <= columns
     tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
-    assert {"sent_articles", "bot_state", "article_feedback", "translation_cache"} <= tables
+    assert {"sent_articles", "bot_state", "article_feedback", "translation_cache", "releases"} <= tables
 
 
 def test_daily_promo_is_only_due_once_at_configured_hour(tmp_path):
@@ -176,7 +177,8 @@ def test_english_notice_is_shown_even_when_translation_succeeds():
     message = bot.build_message(item)
     assert "Titular y resumen traducidos automáticamente" in message
     assert "La noticia original está en inglés" in message
-    assert message.index("La noticia original está en inglés") < message.index("Leer noticia completa")
+    assert "Leer noticia completa" not in message
+    assert item.link not in message
 
 
 def test_failed_translation_is_clearly_identified():
@@ -210,3 +212,68 @@ def test_translation_protects_switch_2_brand(monkeypatch):
 
     monkeypatch.setattr(bot.requests, "get", lambda *args, **kwargs: Response())
     assert bot.translate_text("The new Nintendo Switch 2 is here", "en") == "El nuevo Nintendo Switch 2 ya está aquí"
+
+
+def test_morning_digest_uses_previous_day_and_only_runs_once(tmp_path, monkeypatch):
+    monkeypatch.setattr(bot, "MORNING_DIGEST_HOUR", 9)
+    conn = bot.create_database(str(tmp_path / "morning.db"))
+    now = datetime(2026, 9, 3, 9, 0, tzinfo=ZoneInfo("Europe/Madrid"))
+    assert bot.morning_digest_is_due(conn, now)
+    start, end = bot.previous_day_bounds(now)
+    assert end - start == 86400
+    rows = [("Noticia A", "https://example.com/a", "Fuente", 10)]
+    message = bot.build_morning_digest(rows)
+    assert "Las 3 noticias más importantes de ayer" in message
+    assert "A ver qué nos trae hoy Nintendo Switch 2" in message
+    bot.set_state(conn, "last_morning_digest", now.date().isoformat())
+    assert not bot.morning_digest_is_due(conn, now)
+
+
+def test_confirmed_release_date_is_extracted_but_rumor_is_rejected():
+    item = story("Metroid Prime 4 launches on 18 September 2026 for Nintendo Switch 2", "", "en")
+    item.reliability = 3
+    extracted = bot.extract_release(item, today=datetime(2026, 9, 2).date())
+    assert extracted[1] == "Metroid Prime 4"
+    assert extracted[2] == "2026-09-18"
+    item.status = "rumor"
+    assert bot.extract_release(item, today=datetime(2026, 9, 2).date()) is None
+
+
+def test_release_name_is_cleaned_from_review_roundup():
+    title = "Round Up: The Reviews For Orbitals On Switch 2 Are In"
+    assert bot.release_name_from_title(title) == "Orbitals"
+
+
+def test_release_calendar_is_created_pinned_and_not_reedited_without_changes(tmp_path, monkeypatch):
+    conn = bot.create_database(str(tmp_path / "calendar.db"))
+    item = story("Metroid Prime 4 se lanza el 18 de septiembre de 2026 para Nintendo Switch 2")
+    item.reliability = 3
+    assert bot.update_releases(conn, [item], today=datetime(2026, 9, 2).date())
+    now = datetime(2026, 9, 2, 12, 0, tzinfo=ZoneInfo("Europe/Madrid"))
+    monkeypatch.setattr(bot, "local_now", lambda: now)
+    calls = []
+
+    def fake_call(token, method, payload):
+        calls.append((method, payload))
+        if method == "sendMessage":
+            return {"ok": True, "result": {"message_id": 123}}
+        return {"ok": True, "result": True}
+
+    monkeypatch.setattr(bot, "telegram_call", fake_call)
+    bot.sync_release_calendar(conn)
+    assert [call[0] for call in calls] == ["sendMessage", "pinChatMessage"]
+    assert bot.get_state(conn, "calendar_message_id") == "123"
+    assert "Metroid Prime 4" in calls[0][1]["text"]
+    calls.clear()
+    bot.sync_release_calendar(conn)
+    assert calls == []
+
+
+def test_calendar_reminder_is_monday_only(tmp_path, monkeypatch):
+    monkeypatch.setattr(bot, "CALENDAR_REMINDER_HOUR", 10)
+    conn = bot.create_database(str(tmp_path / "reminder.db"))
+    bot.set_state(conn, "calendar_message_id", "123")
+    monday = datetime(2026, 9, 7, 10, 0, tzinfo=ZoneInfo("Europe/Madrid"))
+    tuesday = datetime(2026, 9, 8, 10, 0, tzinfo=ZoneInfo("Europe/Madrid"))
+    assert bot.calendar_reminder_is_due(conn, monday)
+    assert not bot.calendar_reminder_is_due(conn, tuesday)
