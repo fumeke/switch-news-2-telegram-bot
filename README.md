@@ -1,84 +1,75 @@
 # Bot de noticias Nintendo Switch 2
 
-Bot de Telegram para agregar noticias de Nintendo Switch 2 en castellano usando RSS, filtro de palabras clave y almacenamiento de artículos ya enviados.
+Agregador de noticias para Telegram con fuentes españolas e internacionales, traducción al español, puntuación de relevancia, imágenes y clasificación editorial automática.
 
-## Estructura
+## Funciones
 
-- `switch_news_bot.py`: script principal
-- `requirements.txt`: dependencias de Python
-- `.github/workflows/switch-news.yml`: tarea programada para GitHub Actions
-- `.env`: configuración local (no se debe compartir)
+- RSS en español e inglés: Nintendo Life, IGN, Eurogamer, The Verge, Nintenderos, Vandal y más.
+- Idioma configurado individualmente para cada fuente.
+- Traducción al español de títulos y descripciones de fuentes internacionales.
+- Detección de `Switch 2`, `Switch successor`, `next Nintendo console` y expresiones equivalentes.
+- Puntuación de relevancia de 0 a 10 y umbral configurable.
+- Etiquetas `🟢 Confirmado`, `🟡 Rumor` y `🔵 Noticia` basadas en el texto del artículo.
+- Publicación con imagen RSS mediante `sendPhoto`, con reintento automático como texto si la imagen falla.
+- Mensajes HTML seguros, descripción breve, fuente, fecha y enlace.
+- Migración automática de bases SQLite creadas por versiones anteriores.
+- Límite de publicaciones por ejecución para evitar ráfagas en el canal.
+
+Las etiquetas son una clasificación heurística: `Confirmado` indica que el texto contiene señales explícitas de confirmación oficial; no sustituye una comprobación editorial.
 
 ## Configuración
 
-1. Crea un bot con @BotFather en Telegram.
-2. Obtén el `BOT_TOKEN` y tu `CHAT_ID`.
-3. Crea un archivo `.env` en la raíz del proyecto con estos valores:
+Crea un archivo `.env` en la raíz (no debe subirse al repositorio):
 
 ```env
 TELEGRAM_BOT_TOKEN=123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11
 TELEGRAM_CHAT_ID=-1001234567890
 DATABASE_PATH=seen.db
+
+# Opcionales
+TRANSLATION_ENABLED=true
+MIN_RELEVANCE_SCORE=4
+MAX_ARTICLES_PER_RUN=10
 ```
 
-4. Instala dependencias:
+`TRANSLATION_ENABLED=false` conserva el texto original. Si el servicio de traducción no está disponible, el bot publica el original y continúa procesando el resto.
+
+## Instalación y uso
 
 ```bash
 python3 -m pip install -r requirements.txt
-```
-
-## Uso
-
-Ejecuta el script manualmente:
-
-```bash
+python3 switch_news_bot.py --dry-run
 python3 switch_news_bot.py
 ```
 
-Para probar sin enviar mensajes, usa:
+El modo `--dry-run` no necesita credenciales, no envía publicaciones y tampoco marca artículos como vistos.
 
-```bash
-python3 switch_news_bot.py --dry-run
+## Fuentes e idiomas
+
+Las fuentes se definen como objetos `FeedConfig` al inicio de `switch_news_bot.py`:
+
+```python
+FeedConfig("https://www.nintenderos.com/feed/", "es", "Nintenderos")
+FeedConfig("https://www.nintendolife.com/feeds/latest", "en", "Nintendo Life")
 ```
 
-## Despliegue
+Para añadir una fuente, indica su URL, código de idioma y nombre. Los idiomas distintos de `es` se traducen cuando la traducción está activada.
 
-Puedes ejecutarlo cada hora con GitHub Actions usando el workflow en `.github/workflows/switch-news.yml`.
+## Filtrado y relevancia
 
-Para activarlo en GitHub:
+Una mención directa a Switch 2 en el título recibe más puntuación que una mención en la descripción. Los términos de anuncio oficial, lanzamiento, precio, especificaciones, ventas o actualizaciones suman relevancia; contenido tipo sorteo, newsletter o podcast resta puntuación. Solo se procesan noticias que alcancen `MIN_RELEVANCE_SCORE`.
 
-1. Sube el proyecto al repositorio, incluyendo `.github/workflows/switch-news.yml`.
-2. En GitHub, entra en `Settings` -> `Secrets and variables` -> `Actions`.
-3. Crea estos `Repository secrets`:
-   - `TELEGRAM_BOT_TOKEN`
-   - `TELEGRAM_CHAT_ID`
-4. Entra en la pestaña `Actions` del repositorio y habilita workflows si GitHub te lo pide.
-5. Ejecuta `Enviar noticias Switch 2 a Telegram` manualmente con `Run workflow` para probarlo.
+## Base de datos
 
-Después de eso, GitHub Actions lo ejecutará cada hora. La base `seen.db` se restaura con cache entre ejecuciones para evitar reenviar noticias ya publicadas.
+La tabla `sent_articles` conserva título y resumen finales, título original, idioma, imagen, puntuación, clasificación, fuente y fecha. Al abrir una base antigua, las columnas nuevas se añaden automáticamente sin borrar los artículos ya registrados.
 
-### Diagnóstico de Telegram en GitHub Actions
+## GitHub Actions
 
-Si el log muestra `404 {"ok":false,"error_code":404,"description":"Not Found"}` al llamar a Telegram, casi siempre el `TELEGRAM_BOT_TOKEN` configurado en `Repository secrets` no es válido o está mal copiado.
+El workflow `.github/workflows/switch-news.yml` ejecuta el bot cada hora. Configura en `Settings` → `Secrets and variables` → `Actions`:
 
-Revisa en GitHub `Settings` -> `Secrets and variables` -> `Actions`:
+- `TELEGRAM_BOT_TOKEN`
+- `TELEGRAM_CHAT_ID`
 
-- `TELEGRAM_BOT_TOKEN` debe tener formato `123456:ABC...`, sin añadir `bot` delante.
-- `TELEGRAM_CHAT_ID` debe ser el id numérico del chat o canal. Para canales suele empezar por `-100`.
+La base `seen.db` se restaura mediante la caché del workflow para evitar publicaciones repetidas.
 
-## Fuentes RSS incluidas
-
-- `https://www.nintenderos.com/feed/`
-- `https://www.hobbyconsolas.com/feed`
-- `https://www.vidaextra.com/feed`
-- `https://www.meristation.com/feed`
-- `https://news.google.com/rss/search?q=Nintendo+Switch+2+lang:es&hl=es-419&gl=ES`
-
-## Filtrado
-
-El bot solo publica noticias cuyo título o resumen mencionen explícitamente `Switch 2`, `Nintendo Switch 2` o `Switch2`. No basta con que aparezcan palabras generales como `Nintendo`, `Mario`, `Zelda`, `Pokemon`, `lanzamiento` o `rumor`.
-
-## Personalización
-
-- Ajusta `SWITCH_2_PATTERN` dentro de `switch_news_bot.py` si necesitas aceptar otra forma concreta de escribir Nintendo Switch 2.
-- Añade nuevas fuentes RSS a la lista `RSS_FEEDS`
+Si Telegram devuelve un error 404, revisa que el token no lleve el prefijo `bot`, no contenga espacios y coincida exactamente con el entregado por BotFather.
