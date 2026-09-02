@@ -118,6 +118,7 @@ class Story:
     published_timestamp: int = 0
     other_sources: str = ""
     reliability: int = 2
+    translation_status: str = "not_needed"
 
 
 def create_database(path: str) -> sqlite3.Connection:
@@ -132,6 +133,7 @@ def create_database(path: str) -> sqlite3.Connection:
         "relevance_score": "INTEGER DEFAULT 0", "status": "TEXT", "original_title": "TEXT",
         "published_timestamp": "INTEGER DEFAULT 0", "other_sources": "TEXT",
         "reliability": "INTEGER DEFAULT 2", "feedback_key": "TEXT",
+        "translation_status": "TEXT DEFAULT 'not_needed'",
     }
     for column, definition in migrations.items():
         if column not in existing:
@@ -140,6 +142,10 @@ def create_database(path: str) -> sqlite3.Connection:
     conn.execute(
         "CREATE TABLE IF NOT EXISTS article_feedback (article_key TEXT, user_id TEXT, rating TEXT, created_at INTEGER, "
         "PRIMARY KEY (article_key, user_id))"
+    )
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS translation_cache (story_id TEXT PRIMARY KEY, title TEXT, summary TEXT, "
+        "status TEXT, created_at INTEGER)"
     )
     conn.commit()
     return conn
@@ -340,21 +346,98 @@ def apply_feedback_adjustments(conn: sqlite3.Connection, stories: Iterable[Story
     return [story for story in adjusted if story.relevance_score >= MIN_RELEVANCE_SCORE]
 
 
-def translate_story(story: Story) -> Story:
+def translate_text(text: str, source_language: str) -> str:
+    if not text:
+        return ""
+    protected_terms = []
+
+    def protect(match):
+        protected_terms.append(match.group(0))
+        return f"ZXQTERM{len(protected_terms) - 1}QXZ"
+
+    protected_text = re.sub(r"\b(?:Nintendo\s+)?Switch\s*2\b|\bNintendo\s+Direct\b", protect, text, flags=re.I)
+
+    def restore(value: str) -> str:
+        for index, term in enumerate(protected_terms):
+            value = re.sub(f"ZXQTERM{index}QXZ", term, value, flags=re.I)
+        return value
+
+    errors = []
+    source_code = source_language.split("-")[0]
+    try:
+        response = requests.get(
+            "https://translate.googleapis.com/translate_a/single",
+            params={"client": "gtx", "sl": source_code, "tl": "es", "dt": "t", "q": protected_text},
+            timeout=12,
+        )
+        response.raise_for_status()
+        translated = "".join(segment[0] for segment in response.json()[0] if segment and segment[0])
+        if translated:
+            return restore(translated)
+        raise ValueError("respuesta vacía")
+    except Exception as exc:
+        errors.append(f"Google: {exc}")
+    try:
+        response = requests.get(
+            "https://api.mymemory.translated.net/get",
+            params={"q": protected_text[:450], "langpair": f"{source_code}|es"},
+            timeout=12,
+        )
+        response.raise_for_status()
+        translated = response.json().get("responseData", {}).get("translatedText", "")
+        if translated:
+            return restore(translated)
+        raise ValueError("respuesta vacía")
+    except Exception as exc:
+        errors.append(f"MyMemory: {exc}")
+    raise RuntimeError("; ".join(errors))
+
+
+def translate_story(story: Story, conn: sqlite3.Connection = None) -> Story:
     if not TRANSLATION_ENABLED or story.language.lower().startswith("es"):
         return replace(story, summary=concise_summary(story.summary))
+    if conn is not None:
+        cached = conn.execute(
+            "SELECT title, summary, status FROM translation_cache WHERE story_id = ? AND created_at >= ?",
+            (story.id, int(time.time()) - 7 * 86400),
+        ).fetchone()
+        if cached:
+            return replace(
+                story, title=cached[0], summary=cached[1], original_title=story.title,
+                translation_status=cached[2],
+            )
+    title, summary = "", ""
+    failures = []
     try:
-        from deep_translator import GoogleTranslator
-        translator = GoogleTranslator(source=story.language.split("-")[0], target="es")
-        title = translator.translate(story.title)
-        summary = translator.translate(story.summary[:1000]) if story.summary else ""
-        return replace(
-            story, title=title or story.title, summary=concise_summary(summary or story.summary),
-            original_title=story.title,
-        )
+        title = translate_text(story.title, story.language)
     except Exception as exc:
-        logger.warning("No se pudo traducir '%s': %s", story.title, exc)
-        return replace(story, summary=concise_summary(story.summary))
+        failures.append(f"titular: {exc}")
+    if story.summary:
+        try:
+            summary = translate_text(story.summary[:1000], story.language)
+        except Exception as exc:
+            failures.append(f"resumen: {exc}")
+    title_ok = bool(title)
+    summary_ok = not story.summary or bool(summary)
+    status = "complete" if title_ok and summary_ok else ("partial" if title_ok or summary_ok else "failed")
+    result = replace(
+        story,
+        title=title or story.title,
+        summary=concise_summary(summary or story.summary),
+        original_title=story.title,
+        translation_status=status,
+    )
+    if failures:
+        logger.warning("Traducción %s para '%s': %s", status, story.title, "; ".join(failures))
+    if conn is not None and status in {"complete", "partial"}:
+        conn.execute(
+            "INSERT INTO translation_cache (story_id, title, summary, status, created_at) VALUES (?, ?, ?, ?, ?) "
+            "ON CONFLICT(story_id) DO UPDATE SET title = excluded.title, summary = excluded.summary, "
+            "status = excluded.status, created_at = excluded.created_at",
+            (story.id, result.title, result.summary, status, int(time.time())),
+        )
+        conn.commit()
+    return result
 
 
 def feedback_key(story: Story) -> str:
@@ -372,11 +455,11 @@ def mark_as_sent(conn: sqlite3.Connection, story: Story) -> None:
     conn.execute(
         "INSERT OR IGNORE INTO sent_articles "
         "(id, title, link, published, source, created_at, summary, language, image_url, relevance_score, status, "
-        "original_title, published_timestamp, other_sources, reliability, feedback_key) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "original_title, published_timestamp, other_sources, reliability, feedback_key, translation_status) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (story.id, story.title, story.link, story.published, story.source, int(time.time()), story.summary,
          story.language, story.image_url, story.relevance_score, story.status, story.original_title,
-         story.published_timestamp, story.other_sources, story.reliability, feedback_key(story)),
+         story.published_timestamp, story.other_sources, story.reliability, feedback_key(story), story.translation_status),
     )
     conn.commit()
 
@@ -397,6 +480,14 @@ def build_message(story: Story) -> str:
         metadata += f" · {html.escape(story.published)}"
     parts.extend(["", f"📰 {metadata}", f"⭐ Relevancia: {story.relevance_score}/10"])
     if story.link:
+        if story.language.lower().startswith("en"):
+            translation_notes = {
+                "complete": "🇬🇧 <i>Titular y resumen traducidos automáticamente. La noticia original está en inglés.</i>",
+                "partial": "🇬🇧 <i>Traducción automática parcial. La noticia original está en inglés.</i>",
+                "failed": "🇬🇧 <i>Noticia en inglés. La traducción no está disponible temporalmente.</i>",
+                "not_needed": "🇬🇧 <i>La noticia original está en inglés.</i>",
+            }
+            parts.extend(["", translation_notes.get(story.translation_status, translation_notes["not_needed"])])
         parts.extend(["", f'<a href="{html.escape(story.link, quote=True)}">Leer noticia completa →</a>'])
     return "\n".join(parts)[:1024 if story.image_url else 4096]
 
@@ -709,13 +800,13 @@ def run(dry_run: bool = False) -> int:
     if not dry_run:
         record_news_activity(conn, bool(stories))
     stories.sort(key=lambda story: story.published_timestamp, reverse=True)
-    candidates = get_unsent_stories(conn, stories)[:MAX_ARTICLES_PER_RUN * 3]
-    translated = [translate_story(story) for story in candidates]
+    candidates = smart_deduplicate_stories(get_unsent_stories(conn, stories))[:MAX_ARTICLES_PER_RUN * 2]
+    translated = [translate_story(story, conn) for story in candidates]
     international = [story for story in candidates if not story.language.lower().startswith("es")]
     if not dry_run:
         record_translation_health(
             conn, bool(international),
-            any(story.original_title for story in translated if not story.language.lower().startswith("es")),
+            any(story.translation_status in {"complete", "partial"} for story in translated if not story.language.lower().startswith("es")),
         )
     unsent = smart_deduplicate_stories(remove_recently_sent_duplicates(conn, translated))[:MAX_ARTICLES_PER_RUN]
     logger.info("Encontradas %d noticias relevantes, %d nuevas para procesar", len(stories), len(unsent))

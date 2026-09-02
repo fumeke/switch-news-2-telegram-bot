@@ -45,9 +45,10 @@ def test_database_migrates_old_schema(tmp_path):
     assert {
         "summary", "language", "image_url", "relevance_score", "status", "original_title",
         "published_timestamp", "other_sources", "reliability", "feedback_key",
+        "translation_status",
     } <= columns
     tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
-    assert {"sent_articles", "bot_state", "article_feedback"} <= tables
+    assert {"sent_articles", "bot_state", "article_feedback", "translation_cache"} <= tables
 
 
 def test_daily_promo_is_only_due_once_at_configured_hour(tmp_path):
@@ -167,3 +168,45 @@ def test_reader_feedback_adjusts_source_score(tmp_path):
     candidate.source = "Fuente favorita"
     candidate.relevance_score = 7
     assert bot.apply_feedback_adjustments(conn, [candidate])[0].relevance_score == 8
+
+
+def test_english_notice_is_shown_even_when_translation_succeeds():
+    item = story("Título traducido", "Resumen traducido", "en")
+    item.translation_status = "complete"
+    message = bot.build_message(item)
+    assert "Titular y resumen traducidos automáticamente" in message
+    assert "La noticia original está en inglés" in message
+    assert message.index("La noticia original está en inglés") < message.index("Leer noticia completa")
+
+
+def test_failed_translation_is_clearly_identified():
+    item = story("English headline", "English description", "en")
+    item.translation_status = "failed"
+    assert "traducción no está disponible temporalmente" in bot.build_message(item)
+
+
+def test_title_translation_survives_summary_failure(monkeypatch):
+    item = story("English headline", "English description", "en")
+
+    def fake_translate(text, source_language):
+        if text == item.title:
+            return "Titular en español"
+        raise RuntimeError("servicio no disponible")
+
+    monkeypatch.setattr(bot, "translate_text", fake_translate)
+    translated = bot.translate_story(item)
+    assert translated.title == "Titular en español"
+    assert translated.summary == "English description"
+    assert translated.translation_status == "partial"
+
+
+def test_translation_protects_switch_2_brand(monkeypatch):
+    class Response:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return [[['El nuevo ZXQTERM0QXZ ya está aquí', None, None, None]]]
+
+    monkeypatch.setattr(bot.requests, "get", lambda *args, **kwargs: Response())
+    assert bot.translate_text("The new Nintendo Switch 2 is here", "en") == "El nuevo Nintendo Switch 2 ya está aquí"

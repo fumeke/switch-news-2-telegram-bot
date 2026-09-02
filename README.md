@@ -7,6 +7,8 @@ Agregador de noticias para Telegram con fuentes españolas e internacionales, tr
 - RSS en español e inglés: Nintendo Life, IGN, Eurogamer, The Verge, Nintenderos, Vandal y más.
 - Idioma configurado individualmente para cada fuente.
 - Traducción al español de títulos y descripciones de fuentes internacionales.
+- Segundo proveedor de traducción de respaldo, tiempos máximos de espera y caché para reducir fallos y peticiones repetidas.
+- Aviso visible antes del enlace cuando la página original está en inglés, incluso si fue traducida.
 - Detección de `Switch 2`, `Switch successor`, `next Nintendo console` y expresiones equivalentes.
 - Puntuación de relevancia de 0 a 10 y umbral configurable.
 - Etiquetas `🟢 Confirmado`, `🟡 Rumor` y `🔵 Noticia` basadas en el texto del artículo.
@@ -52,6 +54,8 @@ WEEKLY_DIGEST_HOUR=20
 ```
 
 `TRANSLATION_ENABLED=false` conserva el texto original. Si el servicio de traducción no está disponible, el bot publica el original y continúa procesando el resto.
+
+Las traducciones de titular y resumen se realizan por separado: si una falla, se conserva la otra. Para noticias inglesas, el mensaje siempre avisa antes del enlace de que la página de destino está en inglés. Los resultados se guardan durante siete días en `translation_cache`.
 
 El mensaje promocional se envía una sola vez al día al final de la primera ejecución a partir de `PROMO_HOUR` en `CHANNEL_TIMEZONE`. Si no se define `PROMO_TEXT`, el bot rota automáticamente entre cuatro mensajes. La fecha del último envío queda guardada en SQLite, por lo que un reintento de GitHub Actions no lo duplica. `PROMO_TEXT` admite el HTML compatible con Telegram.
 
