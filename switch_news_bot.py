@@ -5,10 +5,12 @@ import re
 import sqlite3
 import time
 from dataclasses import dataclass, replace
+from datetime import datetime
 from os import environ
 from pathlib import Path
 from typing import Iterable, List, Set
 from urllib.parse import urlparse
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import feedparser
 import requests
@@ -22,6 +24,14 @@ DATABASE_PATH = environ.get("DATABASE_PATH", "seen.db")
 TRANSLATION_ENABLED = environ.get("TRANSLATION_ENABLED", "true").lower() in {"1", "true", "yes", "si"}
 MIN_RELEVANCE_SCORE = int(environ.get("MIN_RELEVANCE_SCORE", "4"))
 MAX_ARTICLES_PER_RUN = int(environ.get("MAX_ARTICLES_PER_RUN", "10"))
+CHANNEL_TIMEZONE = environ.get("CHANNEL_TIMEZONE", "Europe/Madrid")
+PROMO_HOUR = int(environ.get("PROMO_HOUR", "21"))
+PROMO_TEXT = environ.get(
+    "PROMO_TEXT",
+    "🎮 <b>La actualidad de Nintendo se disfruta más en compañía.</b>\n\n"
+    "¿Tienes un amigo que vive pendiente de Switch 2? "
+    "Envíale este canal y que no se pierda la próxima gran noticia. 🚀",
+)
 TELEGRAM_TOKEN_PATTERN = re.compile(r"^\d+:[A-Za-z0-9_-]{35,}$")
 
 
@@ -100,6 +110,7 @@ def create_database(path: str) -> sqlite3.Connection:
     for column, definition in migrations.items():
         if column not in existing:
             conn.execute(f"ALTER TABLE sent_articles ADD COLUMN {column} {definition}")
+    conn.execute("CREATE TABLE IF NOT EXISTS bot_state (key TEXT PRIMARY KEY, value TEXT NOT NULL)")
     conn.commit()
     return conn
 
@@ -289,6 +300,51 @@ def send_telegram_story(token: str, chat_id: str, story: Story) -> bool:
     })
 
 
+def local_now() -> datetime:
+    try:
+        timezone = ZoneInfo(CHANNEL_TIMEZONE)
+    except ZoneInfoNotFoundError:
+        logger.error("Zona horaria desconocida '%s'; se usará UTC.", CHANNEL_TIMEZONE)
+        timezone = ZoneInfo("UTC")
+    return datetime.now(timezone)
+
+
+def promo_is_due(conn: sqlite3.Connection, now: datetime) -> bool:
+    if now.hour < PROMO_HOUR:
+        return False
+    last_date = conn.execute("SELECT value FROM bot_state WHERE key = 'last_promo_date'").fetchone()
+    return last_date is None or last_date[0] != now.date().isoformat()
+
+
+def mark_promo_as_sent(conn: sqlite3.Connection, now: datetime) -> None:
+    conn.execute(
+        "INSERT INTO bot_state (key, value) VALUES ('last_promo_date', ?) "
+        "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+        (now.date().isoformat(),),
+    )
+    conn.commit()
+
+
+def send_daily_promo(conn: sqlite3.Connection, dry_run: bool = False) -> None:
+    now = local_now()
+    if not promo_is_due(conn, now):
+        return
+    if dry_run:
+        logger.info("Dry-run del mensaje promocional de las %02d:00:\n%s", PROMO_HOUR, PROMO_TEXT)
+        return
+    payload = {
+        "chat_id": TELEGRAM_CHAT_ID.strip(),
+        "text": PROMO_TEXT,
+        "parse_mode": "HTML",
+        "disable_web_page_preview": "true",
+    }
+    if telegram_request(TELEGRAM_BOT_TOKEN, "sendMessage", payload):
+        mark_promo_as_sent(conn, now)
+        logger.info("Mensaje promocional diario enviado.")
+    else:
+        logger.warning("No se pudo enviar el mensaje promocional diario; se reintentará en otra ejecución.")
+
+
 def run(dry_run: bool = False) -> int:
     if not dry_run and (not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID):
         logger.error("Falta TELEGRAM_BOT_TOKEN o TELEGRAM_CHAT_ID en el entorno.")
@@ -321,6 +377,7 @@ def run(dry_run: bool = False) -> int:
             logger.warning("No se pudo enviar: %s", story.link)
     if not unsent:
         logger.info("No hay noticias nuevas para enviar.")
+    send_daily_promo(conn, dry_run=dry_run)
     conn.close()
     return 0
 

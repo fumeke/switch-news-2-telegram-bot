@@ -14,6 +14,7 @@ Agregador de noticias para Telegram con fuentes españolas e internacionales, tr
 - Mensajes HTML seguros, descripción breve, fuente, fecha y enlace.
 - Migración automática de bases SQLite creadas por versiones anteriores.
 - Límite de publicaciones por ejecución para evitar ráfagas en el canal.
+- Mensaje promocional diario al final de la ejecución de las 21:00, sin duplicados.
 
 Las etiquetas son una clasificación heurística: `Confirmado` indica que el texto contiene señales explícitas de confirmación oficial; no sustituye una comprobación editorial.
 
@@ -30,9 +31,14 @@ DATABASE_PATH=seen.db
 TRANSLATION_ENABLED=true
 MIN_RELEVANCE_SCORE=4
 MAX_ARTICLES_PER_RUN=10
+CHANNEL_TIMEZONE=Europe/Madrid
+PROMO_HOUR=21
+PROMO_TEXT=¿Tienes un amigo que vive pendiente de Switch 2? Envíale este canal y que no se pierda la próxima gran noticia.
 ```
 
 `TRANSLATION_ENABLED=false` conserva el texto original. Si el servicio de traducción no está disponible, el bot publica el original y continúa procesando el resto.
+
+El mensaje promocional se envía una sola vez al día al final de la primera ejecución a partir de `PROMO_HOUR` en `CHANNEL_TIMEZONE`. La fecha del último envío queda guardada en SQLite, por lo que un reintento de GitHub Actions no lo duplica. `PROMO_TEXT` admite el HTML compatible con Telegram.
 
 ## Instalación y uso
 
