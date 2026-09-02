@@ -15,6 +15,9 @@ Agregador de noticias para Telegram con fuentes españolas e internacionales, tr
 - Migración automática de bases SQLite creadas por versiones anteriores.
 - Límite de publicaciones por ejecución para evitar ráfagas en el canal.
 - Mensaje promocional diario al final de la ejecución de las 21:00, sin duplicados.
+- Descarte de artículos con más de 48 horas y orden cronológico normalizado.
+- Detección de coberturas duplicadas aunque procedan de medios y URL diferentes.
+- Botones para abrir y compartir cada noticia directamente desde Telegram.
 
 Las etiquetas son una clasificación heurística: `Confirmado` indica que el texto contiene señales explícitas de confirmación oficial; no sustituye una comprobación editorial.
 
@@ -31,6 +34,8 @@ DATABASE_PATH=seen.db
 TRANSLATION_ENABLED=true
 MIN_RELEVANCE_SCORE=4
 MAX_ARTICLES_PER_RUN=10
+MAX_ARTICLE_AGE_HOURS=48
+DUPLICATE_SIMILARITY=0.76
 CHANNEL_TIMEZONE=Europe/Madrid
 PROMO_HOUR=21
 PROMO_TEXT=¿Tienes un amigo que vive pendiente de Switch 2? Envíale este canal y que no se pierda la próxima gran noticia.

@@ -1,15 +1,19 @@
 import argparse
+import calendar
 import html
+import json
 import logging
 import re
 import sqlite3
 import time
+import unicodedata
 from dataclasses import dataclass, replace
-from datetime import datetime
+from datetime import datetime, timezone
+from difflib import SequenceMatcher
 from os import environ
 from pathlib import Path
 from typing import Iterable, List, Set
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import feedparser
@@ -24,6 +28,8 @@ DATABASE_PATH = environ.get("DATABASE_PATH", "seen.db")
 TRANSLATION_ENABLED = environ.get("TRANSLATION_ENABLED", "true").lower() in {"1", "true", "yes", "si"}
 MIN_RELEVANCE_SCORE = int(environ.get("MIN_RELEVANCE_SCORE", "4"))
 MAX_ARTICLES_PER_RUN = int(environ.get("MAX_ARTICLES_PER_RUN", "10"))
+MAX_ARTICLE_AGE_HOURS = int(environ.get("MAX_ARTICLE_AGE_HOURS", "48"))
+DUPLICATE_SIMILARITY = float(environ.get("DUPLICATE_SIMILARITY", "0.76"))
 CHANNEL_TIMEZONE = environ.get("CHANNEL_TIMEZONE", "Europe/Madrid")
 PROMO_HOUR = int(environ.get("PROMO_HOUR", "21"))
 PROMO_TEXT = environ.get(
@@ -94,6 +100,8 @@ class Story:
     relevance_score: int = 0
     status: str = "noticia"
     original_title: str = ""
+    published_timestamp: int = 0
+    other_sources: str = ""
 
 
 def create_database(path: str) -> sqlite3.Connection:
@@ -106,6 +114,7 @@ def create_database(path: str) -> sqlite3.Connection:
     migrations = {
         "summary": "TEXT", "language": "TEXT", "image_url": "TEXT",
         "relevance_score": "INTEGER DEFAULT 0", "status": "TEXT", "original_title": "TEXT",
+        "published_timestamp": "INTEGER DEFAULT 0", "other_sources": "TEXT",
     }
     for column, definition in migrations.items():
         if column not in existing:
@@ -117,6 +126,11 @@ def create_database(path: str) -> sqlite3.Connection:
 
 def clean_text(value: str) -> str:
     return " ".join(html.unescape(re.sub(r"<[^>]+>", " ", value or "")).split())
+
+
+def entry_timestamp(entry) -> int:
+    parsed = entry.get("published_parsed") or entry.get("updated_parsed")
+    return calendar.timegm(parsed) if parsed else 0
 
 
 def relevance_score(story: Story) -> int:
@@ -175,6 +189,7 @@ def fetch_feed(config: FeedConfig) -> List[Story]:
             source=config.name or clean_text(feed.feed.get("title", "")) or urlparse(config.url).netloc,
             language=config.language,
             image_url=extract_image(entry),
+            published_timestamp=entry_timestamp(entry),
         ))
     return stories
 
@@ -197,6 +212,60 @@ def deduplicate_stories(stories: Iterable[Story]) -> List[Story]:
             seen.add(key)
             result.append(story)
     return result
+
+
+def title_key(title: str) -> str:
+    normalized = unicodedata.normalize("NFKD", clean_text(title).lower())
+    normalized = "".join(char for char in normalized if not unicodedata.combining(char))
+    normalized = re.sub(r"\b(?:nintendo|switch|2|the|a|an|el|la|los|las|de|del|en|un|una|para|por|and|y)\b", " ", normalized)
+    return " ".join(re.sub(r"[^a-z0-9 ]", " ", normalized).split())
+
+
+def titles_are_similar(first: str, second: str) -> bool:
+    first_key, second_key = title_key(first), title_key(second)
+    if not first_key or not second_key:
+        return False
+    sequence_score = SequenceMatcher(None, first_key, second_key).ratio()
+    first_words = {word[:6] if len(word) > 6 else word for word in first_key.split()}
+    second_words = {word[:6] if len(word) > 6 else word for word in second_key.split()}
+    token_score = len(first_words & second_words) / max(1, len(first_words | second_words))
+    return sequence_score >= DUPLICATE_SIMILARITY or token_score >= 0.67
+
+
+def smart_deduplicate_stories(stories: Iterable[Story]) -> List[Story]:
+    unique: List[Story] = []
+    for story in stories:
+        duplicate_index = next(
+            (index for index, existing in enumerate(unique) if titles_are_similar(story.title, existing.title)),
+            None,
+        )
+        if duplicate_index is None:
+            unique.append(story)
+            continue
+        existing = unique[duplicate_index]
+        sources = [source for source in (existing.other_sources.split(", ") if existing.other_sources else []) if source]
+        if story.source != existing.source and story.source not in sources:
+            sources.append(story.source)
+        replacement = existing
+        if story.relevance_score > existing.relevance_score or (story.image_url and not existing.image_url):
+            sources = [source for source in [existing.source, *sources] if source != story.source]
+            replacement = story
+        unique[duplicate_index] = replace(replacement, other_sources=", ".join(sources))
+    return unique
+
+
+def filter_fresh_stories(stories: Iterable[Story], now_timestamp: int = None) -> List[Story]:
+    now_timestamp = now_timestamp or int(datetime.now(timezone.utc).timestamp())
+    cutoff = now_timestamp - MAX_ARTICLE_AGE_HOURS * 3600
+    return [story for story in stories if not story.published_timestamp or story.published_timestamp >= cutoff]
+
+
+def remove_recently_sent_duplicates(conn: sqlite3.Connection, stories: Iterable[Story]) -> List[Story]:
+    cutoff = int(time.time()) - MAX_ARTICLE_AGE_HOURS * 3600
+    recent_titles = [row[0] for row in conn.execute(
+        "SELECT title FROM sent_articles WHERE created_at >= ? AND title IS NOT NULL", (cutoff,)
+    )]
+    return [story for story in stories if not any(titles_are_similar(story.title, title) for title in recent_titles)]
 
 
 def translate_story(story: Story) -> Story:
@@ -223,10 +292,11 @@ def get_unsent_stories(conn: sqlite3.Connection, stories: Iterable[Story]) -> Li
 def mark_as_sent(conn: sqlite3.Connection, story: Story) -> None:
     conn.execute(
         "INSERT OR IGNORE INTO sent_articles "
-        "(id, title, link, published, source, created_at, summary, language, image_url, relevance_score, status, original_title) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "(id, title, link, published, source, created_at, summary, language, image_url, relevance_score, status, "
+        "original_title, published_timestamp, other_sources) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (story.id, story.title, story.link, story.published, story.source, int(time.time()), story.summary,
-         story.language, story.image_url, story.relevance_score, story.status, story.original_title),
+         story.language, story.image_url, story.relevance_score, story.status, story.original_title,
+         story.published_timestamp, story.other_sources),
     )
     conn.commit()
 
@@ -242,6 +312,8 @@ def build_message(story: Story) -> str:
         summary = story.summary[:350].rstrip() + ("…" if len(story.summary) > 350 else "")
         parts.extend(["", html.escape(summary)])
     metadata = html.escape(story.source)
+    if story.other_sources:
+        metadata += f" · También: {html.escape(story.other_sources)}"
     if story.published:
         metadata += f" · {html.escape(story.published)}"
     parts.extend(["", f"📰 {metadata}", f"⭐ Relevancia: {story.relevance_score}/10"])
@@ -291,6 +363,15 @@ def validate_telegram_config(token: str, chat_id: str) -> bool:
 def send_telegram_story(token: str, chat_id: str, story: Story) -> bool:
     message = build_message(story)
     common = {"chat_id": chat_id.strip(), "parse_mode": "HTML"}
+    if story.link:
+        share_url = "https://t.me/share/url?url=" + quote(story.link, safe="") + "&text=" + quote(
+            f"{story.title}\n\nSigue las noticias de Nintendo Switch 2 en este canal.", safe=""
+        )
+        keyboard = {"inline_keyboard": [[
+            {"text": "📰 Leer noticia", "url": story.link},
+            {"text": "🔗 Compartir", "url": share_url},
+        ]]}
+        common["reply_markup"] = json.dumps(keyboard)
     if story.image_url:
         if telegram_request(token, "sendPhoto", {**common, "photo": story.image_url, "caption": message}):
             return True
@@ -360,13 +441,14 @@ def run(dry_run: bool = False) -> int:
         except Exception as exc:
             logger.exception("Error leyendo el feed %s: %s", config.url, exc)
 
-    stories = deduplicate_stories(prepare_stories(all_stories))
-    stories.sort(key=lambda story: story.published or "", reverse=True)
-    unsent = get_unsent_stories(conn, stories)[:MAX_ARTICLES_PER_RUN]
+    stories = filter_fresh_stories(deduplicate_stories(prepare_stories(all_stories)))
+    stories.sort(key=lambda story: story.published_timestamp, reverse=True)
+    candidates = get_unsent_stories(conn, stories)[:MAX_ARTICLES_PER_RUN * 3]
+    translated = [translate_story(story) for story in candidates]
+    unsent = smart_deduplicate_stories(remove_recently_sent_duplicates(conn, translated))[:MAX_ARTICLES_PER_RUN]
     logger.info("Encontradas %d noticias relevantes, %d nuevas para procesar", len(stories), len(unsent))
 
-    for original_story in unsent:
-        story = translate_story(original_story)
+    for story in unsent:
         if dry_run:
             logger.info("Dry-run (no se guarda ni se envía):\n%s", build_message(story))
             continue
