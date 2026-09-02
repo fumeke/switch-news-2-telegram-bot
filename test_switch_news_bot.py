@@ -44,8 +44,10 @@ def test_database_migrates_old_schema(tmp_path):
     columns = {row[1] for row in conn.execute("PRAGMA table_info(sent_articles)")}
     assert {
         "summary", "language", "image_url", "relevance_score", "status", "original_title",
-        "published_timestamp", "other_sources",
+        "published_timestamp", "other_sources", "reliability", "feedback_key",
     } <= columns
+    tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
+    assert {"sent_articles", "bot_state", "article_feedback"} <= tables
 
 
 def test_daily_promo_is_only_due_once_at_configured_hour(tmp_path):
@@ -92,3 +94,76 @@ def test_telegram_story_includes_read_and_share_buttons(monkeypatch):
     assert keyboard[0] == {"text": "📰 Leer noticia", "url": item.link}
     assert keyboard[1]["text"] == "🔗 Compartir"
     assert keyboard[1]["url"].startswith("https://t.me/share/url?")
+    feedback_buttons = json.loads(calls[0]["reply_markup"])["inline_keyboard"][1]
+    assert [button["text"] for button in feedback_buttons] == ["🔥 Interesante", "👍 Útil", "👎 Poco relevante"]
+
+
+def test_concise_summary_uses_at_most_two_sentences():
+    result = bot.concise_summary("Primera frase. Segunda frase importante. Tercera frase que sobra.")
+    assert result == "Primera frase. Segunda frase importante."
+
+
+def test_summary_includes_later_switch_2_context():
+    result = bot.concise_summary(
+        "Capcom presentará sus novedades. El evento será en Tokio. Uno de los juegos llegará a Nintendo Switch 2."
+    )
+    assert result == "Capcom presentará sus novedades. Uno de los juegos llegará a Nintendo Switch 2."
+
+
+def test_reliable_source_gets_higher_relevance():
+    regular = story("Nintendo Switch 2 recibe una actualización")
+    trusted = story("Nintendo Switch 2 recibe una actualización")
+    trusted.reliability = 3
+    aggregator = story("Nintendo Switch 2 recibe una actualización")
+    aggregator.reliability = 1
+    assert bot.relevance_score(trusted) > bot.relevance_score(regular) > bot.relevance_score(aggregator)
+
+
+def test_low_reliability_source_cannot_mark_story_as_confirmed():
+    item = story("Oficial: Nintendo confirma Switch 2")
+    item.reliability = 1
+    assert bot.classify_story(item) == "noticia"
+
+
+def test_direct_digest_groups_links():
+    stories = [story(f"Nintendo Direct: anuncio {index}") for index in range(3)]
+    for index, item in enumerate(stories):
+        item.link = f"https://example.com/{index}"
+    digest = bot.build_direct_digest(stories)
+    assert "3 anuncios destacados" in digest
+    assert all(item.link in digest for item in stories)
+
+
+def test_promotional_messages_rotate(monkeypatch):
+    monkeypatch.setattr(bot, "CUSTOM_PROMO_TEXT", "")
+    first = bot.daily_promo_text(datetime(2026, 9, 1, tzinfo=ZoneInfo("Europe/Madrid")))
+    second = bot.daily_promo_text(datetime(2026, 9, 2, tzinfo=ZoneInfo("Europe/Madrid")))
+    assert first != second
+
+
+def test_weekly_digest_only_runs_once_on_sunday(tmp_path, monkeypatch):
+    monkeypatch.setattr(bot, "WEEKLY_DIGEST_HOUR", 20)
+    conn = bot.create_database(str(tmp_path / "weekly.db"))
+    sunday = datetime(2026, 9, 6, 20, 0, tzinfo=ZoneInfo("Europe/Madrid"))
+    assert bot.weekly_digest_is_due(conn, sunday)
+    iso = sunday.isocalendar()
+    bot.set_state(conn, "last_weekly_digest", f"{iso.year}-W{iso.week:02d}")
+    assert not bot.weekly_digest_is_due(conn, sunday)
+
+
+def test_reader_feedback_adjusts_source_score(tmp_path):
+    conn = bot.create_database(str(tmp_path / "feedback.db"))
+    published = story("Nintendo Switch 2 recibe novedades")
+    published.source = "Fuente favorita"
+    bot.mark_as_sent(conn, published)
+    key = bot.feedback_key(published)
+    for user_id in ("1", "2", "3"):
+        conn.execute(
+            "INSERT INTO article_feedback (article_key, user_id, rating, created_at) VALUES (?, ?, 'hot', ?)",
+            (key, user_id, int(bot.time.time())),
+        )
+    conn.commit()
+    candidate = story("Nintendo Switch 2 estrena un juego")
+    candidate.source = "Fuente favorita"
+    candidate.relevance_score = 7
+    assert bot.apply_feedback_adjustments(conn, [candidate])[0].relevance_score == 8

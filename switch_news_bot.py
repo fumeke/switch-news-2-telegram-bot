@@ -1,5 +1,6 @@
 import argparse
 import calendar
+import hashlib
 import html
 import json
 import logging
@@ -31,12 +32,20 @@ MAX_ARTICLES_PER_RUN = int(environ.get("MAX_ARTICLES_PER_RUN", "10"))
 MAX_ARTICLE_AGE_HOURS = int(environ.get("MAX_ARTICLE_AGE_HOURS", "48"))
 DUPLICATE_SIMILARITY = float(environ.get("DUPLICATE_SIMILARITY", "0.76"))
 CHANNEL_TIMEZONE = environ.get("CHANNEL_TIMEZONE", "Europe/Madrid")
+ADMIN_CHAT_ID = environ.get("ADMIN_CHAT_ID", "")
 PROMO_HOUR = int(environ.get("PROMO_HOUR", "21"))
-PROMO_TEXT = environ.get(
-    "PROMO_TEXT",
+WEEKLY_DIGEST_HOUR = int(environ.get("WEEKLY_DIGEST_HOUR", "20"))
+CUSTOM_PROMO_TEXT = environ.get("PROMO_TEXT", "")
+PROMO_MESSAGES = (
     "🎮 <b>La actualidad de Nintendo se disfruta más en compañía.</b>\n\n"
     "¿Tienes un amigo que vive pendiente de Switch 2? "
     "Envíale este canal y que no se pierda la próxima gran noticia. 🚀",
+    "🚀 <b>Que la próxima noticia de Switch 2 no te pille solo.</b>\n\n"
+    "Comparte el canal con ese amigo que siempre quiere enterarse el primero.",
+    "🍄 <b>Una buena partida se comparte. Las buenas noticias, también.</b>\n\n"
+    "Invita a tus amigos al canal y vivid juntos cada anuncio de Nintendo Switch 2.",
+    "🔔 <b>¿Conoces a otro fan de Nintendo?</b>\n\n"
+    "Envíale este canal y ayúdale a no perderse anuncios, lanzamientos y sorpresas.",
 )
 TELEGRAM_TOKEN_PATTERN = re.compile(r"^\d+:[A-Za-z0-9_-]{35,}$")
 
@@ -46,21 +55,26 @@ class FeedConfig:
     url: str
     language: str = "es"
     name: str = ""
+    reliability: int = 2
 
 
 RSS_FEEDS = [
+    FeedConfig(
+        "https://news.google.com/rss/search?q=site%3Anintendo.com+%22Nintendo+Switch+2%22&hl=en-US&gl=US&ceid=US:en",
+        "en", "Nintendo (oficial)", 3,
+    ),
     FeedConfig("https://www.nintenderos.com/feed/", "es", "Nintenderos"),
     FeedConfig("https://www.hobbyconsolas.com/feed", "es", "Hobby Consolas"),
     FeedConfig("https://www.vidaextra.com/feed", "es", "VidaExtra"),
     FeedConfig("https://www.meristation.com/feed", "es", "MeriStation"),
-    FeedConfig("https://news.google.com/rss/search?q=Nintendo+Switch+2+lang:es&hl=es&gl=ES&ceid=ES:es", "es", "Google News"),
+    FeedConfig("https://news.google.com/rss/search?q=Nintendo+Switch+2+lang:es&hl=es&gl=ES&ceid=ES:es", "es", "Google News", 1),
     FeedConfig("https://vandal.elespanol.com/xml.cgi?type=noticias&format=feed", "es", "Vandal"),
     FeedConfig("https://www.nextn.es/feed/", "es", "NextN"),
     FeedConfig("https://www.eurogamer.es/feed/news", "es", "Eurogamer.es"),
-    FeedConfig("https://www.nintendolife.com/feeds/latest", "en", "Nintendo Life"),
-    FeedConfig("https://feeds.ign.com/ign/games-all", "en", "IGN"),
-    FeedConfig("https://www.eurogamer.net/feed", "en", "Eurogamer"),
-    FeedConfig("https://www.theverge.com/rss/index.xml", "en", "The Verge"),
+    FeedConfig("https://www.nintendolife.com/feeds/latest", "en", "Nintendo Life", 3),
+    FeedConfig("https://feeds.ign.com/ign/games-all", "en", "IGN", 3),
+    FeedConfig("https://www.eurogamer.net/feed", "en", "Eurogamer", 3),
+    FeedConfig("https://www.theverge.com/rss/index.xml", "en", "The Verge", 3),
 ]
 
 SWITCH_2_TERMS = (
@@ -83,6 +97,7 @@ CONFIRMED_TERMS = re.compile(
     r"\b(?:official(?:ly)?|oficial(?:mente)?|confirmed|confirmad[oa]|announced|anunciad[oa]|Nintendo (?:says|confirma|anuncia)|press release|comunicado)\b",
     re.I,
 )
+DIRECT_TERMS = re.compile(r"\bnintendo\s+direct\b|\bdirect\s+de\s+nintendo\b", re.I)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
@@ -102,6 +117,7 @@ class Story:
     original_title: str = ""
     published_timestamp: int = 0
     other_sources: str = ""
+    reliability: int = 2
 
 
 def create_database(path: str) -> sqlite3.Connection:
@@ -115,11 +131,16 @@ def create_database(path: str) -> sqlite3.Connection:
         "summary": "TEXT", "language": "TEXT", "image_url": "TEXT",
         "relevance_score": "INTEGER DEFAULT 0", "status": "TEXT", "original_title": "TEXT",
         "published_timestamp": "INTEGER DEFAULT 0", "other_sources": "TEXT",
+        "reliability": "INTEGER DEFAULT 2", "feedback_key": "TEXT",
     }
     for column, definition in migrations.items():
         if column not in existing:
             conn.execute(f"ALTER TABLE sent_articles ADD COLUMN {column} {definition}")
     conn.execute("CREATE TABLE IF NOT EXISTS bot_state (key TEXT PRIMARY KEY, value TEXT NOT NULL)")
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS article_feedback (article_key TEXT, user_id TEXT, rating TEXT, created_at INTEGER, "
+        "PRIMARY KEY (article_key, user_id))"
+    )
     conn.commit()
     return conn
 
@@ -146,6 +167,10 @@ def relevance_score(story: Story) -> int:
         score += 1
     if LOW_VALUE_TERMS.search(combined):
         score -= 2
+    if score and story.reliability >= 3:
+        score += 1
+    elif score and story.reliability <= 1:
+        score -= 1
     return max(0, min(score, 10))
 
 
@@ -153,9 +178,29 @@ def classify_story(story: Story) -> str:
     text = f"{story.title} {story.summary}"
     if RUMOR_TERMS.search(text):
         return "rumor"
-    if CONFIRMED_TERMS.search(text):
+    if CONFIRMED_TERMS.search(text) and story.reliability >= 2:
         return "confirmado"
     return "noticia"
+
+
+def concise_summary(text: str, max_length: int = 340) -> str:
+    text = clean_text(text)
+    text = re.sub(r"^(?:read more|leer más|continue reading|seguir leyendo)[:\s-]*", "", text, flags=re.I)
+    sentences = [sentence for sentence in re.split(r"(?<=[.!?])\s+", text) if sentence]
+    chosen = sentences[:2]
+    focus_sentence = next(
+        (sentence for sentence in sentences if any(pattern.search(sentence) for pattern, _ in SWITCH_2_TERMS)),
+        None,
+    )
+    if focus_sentence and focus_sentence not in chosen:
+        chosen = [sentences[0], focus_sentence]
+    selected = " ".join(chosen).strip()
+    if not selected:
+        return ""
+    if len(selected) <= max_length:
+        return selected
+    shortened = selected[:max_length].rsplit(" ", 1)[0].rstrip(" ,;:")
+    return shortened + "…"
 
 
 def extract_image(entry) -> str:
@@ -190,6 +235,7 @@ def fetch_feed(config: FeedConfig) -> List[Story]:
             language=config.language,
             image_url=extract_image(entry),
             published_timestamp=entry_timestamp(entry),
+            reliability=config.reliability,
         ))
     return stories
 
@@ -268,18 +314,51 @@ def remove_recently_sent_duplicates(conn: sqlite3.Connection, stories: Iterable[
     return [story for story in stories if not any(titles_are_similar(story.title, title) for title in recent_titles)]
 
 
+def source_feedback_adjustments(conn: sqlite3.Connection) -> dict:
+    cutoff = int(time.time()) - 30 * 86400
+    rows = conn.execute(
+        "SELECT sent_articles.source, COUNT(*), "
+        "SUM(CASE article_feedback.rating WHEN 'hot' THEN 1.0 WHEN 'useful' THEN 0.5 ELSE -1.0 END) "
+        "FROM article_feedback JOIN sent_articles ON sent_articles.feedback_key = article_feedback.article_key "
+        "WHERE article_feedback.created_at >= ? GROUP BY sent_articles.source",
+        (cutoff,),
+    ).fetchall()
+    adjustments = {}
+    for source, votes, total in rows:
+        if votes >= 3:
+            average = total / votes
+            adjustments[source] = 1 if average >= 0.35 else (-1 if average <= -0.35 else 0)
+    return adjustments
+
+
+def apply_feedback_adjustments(conn: sqlite3.Connection, stories: Iterable[Story]) -> List[Story]:
+    adjustments = source_feedback_adjustments(conn)
+    adjusted = [
+        replace(story, relevance_score=max(0, min(10, story.relevance_score + adjustments.get(story.source, 0))))
+        for story in stories
+    ]
+    return [story for story in adjusted if story.relevance_score >= MIN_RELEVANCE_SCORE]
+
+
 def translate_story(story: Story) -> Story:
     if not TRANSLATION_ENABLED or story.language.lower().startswith("es"):
-        return story
+        return replace(story, summary=concise_summary(story.summary))
     try:
         from deep_translator import GoogleTranslator
         translator = GoogleTranslator(source=story.language.split("-")[0], target="es")
         title = translator.translate(story.title)
         summary = translator.translate(story.summary[:1000]) if story.summary else ""
-        return replace(story, title=title or story.title, summary=summary or story.summary, original_title=story.title)
+        return replace(
+            story, title=title or story.title, summary=concise_summary(summary or story.summary),
+            original_title=story.title,
+        )
     except Exception as exc:
         logger.warning("No se pudo traducir '%s': %s", story.title, exc)
-        return story
+        return replace(story, summary=concise_summary(story.summary))
+
+
+def feedback_key(story: Story) -> str:
+    return hashlib.sha256(story.id.encode("utf-8")).hexdigest()[:16]
 
 
 def get_unsent_stories(conn: sqlite3.Connection, stories: Iterable[Story]) -> List[Story]:
@@ -293,10 +372,11 @@ def mark_as_sent(conn: sqlite3.Connection, story: Story) -> None:
     conn.execute(
         "INSERT OR IGNORE INTO sent_articles "
         "(id, title, link, published, source, created_at, summary, language, image_url, relevance_score, status, "
-        "original_title, published_timestamp, other_sources) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "original_title, published_timestamp, other_sources, reliability, feedback_key) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (story.id, story.title, story.link, story.published, story.source, int(time.time()), story.summary,
          story.language, story.image_url, story.relevance_score, story.status, story.original_title,
-         story.published_timestamp, story.other_sources),
+         story.published_timestamp, story.other_sources, story.reliability, feedback_key(story)),
     )
     conn.commit()
 
@@ -309,8 +389,7 @@ def build_message(story: Story) -> str:
     }
     parts = [labels[story.status], f"<b>{html.escape(story.title)}</b>"]
     if story.summary:
-        summary = story.summary[:350].rstrip() + ("…" if len(story.summary) > 350 else "")
-        parts.extend(["", html.escape(summary)])
+        parts.extend(["", html.escape(concise_summary(story.summary))])
     metadata = html.escape(story.source)
     if story.other_sources:
         metadata += f" · También: {html.escape(story.other_sources)}"
@@ -370,6 +449,10 @@ def send_telegram_story(token: str, chat_id: str, story: Story) -> bool:
         keyboard = {"inline_keyboard": [[
             {"text": "📰 Leer noticia", "url": story.link},
             {"text": "🔗 Compartir", "url": share_url},
+        ], [
+            {"text": "🔥 Interesante", "callback_data": f"rate:hot:{feedback_key(story)}"},
+            {"text": "👍 Útil", "callback_data": f"rate:useful:{feedback_key(story)}"},
+            {"text": "👎 Poco relevante", "callback_data": f"rate:low:{feedback_key(story)}"},
         ]]}
         common["reply_markup"] = json.dumps(keyboard)
     if story.image_url:
@@ -379,6 +462,58 @@ def send_telegram_story(token: str, chat_id: str, story: Story) -> bool:
     return telegram_request(token, "sendMessage", {
         **common, "text": message, "disable_web_page_preview": "false",
     })
+
+
+def get_state(conn: sqlite3.Connection, key: str, default: str = "") -> str:
+    row = conn.execute("SELECT value FROM bot_state WHERE key = ?", (key,)).fetchone()
+    return row[0] if row else default
+
+
+def set_state(conn: sqlite3.Connection, key: str, value: str) -> None:
+    conn.execute(
+        "INSERT INTO bot_state (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+        (key, value),
+    )
+    conn.commit()
+
+
+def process_pending_feedback(conn: sqlite3.Connection) -> None:
+    offset = int(get_state(conn, "telegram_update_offset", "0"))
+    try:
+        response = requests.get(
+            f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN.strip()}/getUpdates",
+            params={"offset": offset, "timeout": 0, "allowed_updates": json.dumps(["callback_query"])},
+            timeout=15,
+        )
+        data = response.json()
+        if response.status_code != 200 or not data.get("ok"):
+            logger.warning("No se pudieron recoger valoraciones: %s", parse_telegram_error(response))
+            return
+    except (requests.RequestException, ValueError) as exc:
+        logger.warning("No se pudieron recoger valoraciones: %s", exc)
+        return
+    latest_offset = offset
+    for update in data.get("result", []):
+        latest_offset = max(latest_offset, int(update["update_id"]) + 1)
+        callback = update.get("callback_query", {})
+        match = re.fullmatch(r"rate:(hot|useful|low):([a-f0-9]{16})", callback.get("data", ""))
+        if not match:
+            continue
+        rating, article_key = match.groups()
+        user_id = str(callback.get("from", {}).get("id", ""))
+        if user_id:
+            conn.execute(
+                "INSERT INTO article_feedback (article_key, user_id, rating, created_at) VALUES (?, ?, ?, ?) "
+                "ON CONFLICT(article_key, user_id) DO UPDATE SET rating = excluded.rating, created_at = excluded.created_at",
+                (article_key, user_id, rating, int(time.time())),
+            )
+        if callback.get("id"):
+            telegram_request(TELEGRAM_BOT_TOKEN, "answerCallbackQuery", {
+                "callback_query_id": callback["id"], "text": "¡Gracias por tu valoración!",
+            })
+    if latest_offset != offset:
+        conn.commit()
+        set_state(conn, "telegram_update_offset", str(latest_offset))
 
 
 def local_now() -> datetime:
@@ -406,16 +541,23 @@ def mark_promo_as_sent(conn: sqlite3.Connection, now: datetime) -> None:
     conn.commit()
 
 
+def daily_promo_text(now: datetime) -> str:
+    if CUSTOM_PROMO_TEXT:
+        return CUSTOM_PROMO_TEXT
+    return PROMO_MESSAGES[now.toordinal() % len(PROMO_MESSAGES)]
+
+
 def send_daily_promo(conn: sqlite3.Connection, dry_run: bool = False) -> None:
     now = local_now()
     if not promo_is_due(conn, now):
         return
+    promo_text = daily_promo_text(now)
     if dry_run:
-        logger.info("Dry-run del mensaje promocional de las %02d:00:\n%s", PROMO_HOUR, PROMO_TEXT)
+        logger.info("Dry-run del mensaje promocional de las %02d:00:\n%s", PROMO_HOUR, promo_text)
         return
     payload = {
         "chat_id": TELEGRAM_CHAT_ID.strip(),
-        "text": PROMO_TEXT,
+        "text": promo_text,
         "parse_mode": "HTML",
         "disable_web_page_preview": "true",
     }
@@ -426,6 +568,119 @@ def send_daily_promo(conn: sqlite3.Connection, dry_run: bool = False) -> None:
         logger.warning("No se pudo enviar el mensaje promocional diario; se reintentará en otra ejecución.")
 
 
+def notify_admin(text: str) -> None:
+    if not ADMIN_CHAT_ID:
+        return
+    telegram_request(TELEGRAM_BOT_TOKEN, "sendMessage", {
+        "chat_id": ADMIN_CHAT_ID, "text": f"⚠️ <b>Switch News Bot</b>\n\n{html.escape(text)}", "parse_mode": "HTML",
+    })
+
+
+def record_feed_health(conn: sqlite3.Connection, config: FeedConfig, successful: bool) -> None:
+    key_hash = hashlib.sha256(config.url.encode()).hexdigest()[:12]
+    count_key, alert_key = f"feed_failures:{key_hash}", f"feed_alerted:{key_hash}"
+    if successful:
+        if int(get_state(conn, count_key, "0")) >= 3 and get_state(conn, alert_key) == "1":
+            notify_admin(f"El feed {config.name} vuelve a funcionar.")
+        set_state(conn, count_key, "0")
+        set_state(conn, alert_key, "0")
+        return
+    failures = int(get_state(conn, count_key, "0")) + 1
+    set_state(conn, count_key, str(failures))
+    if failures >= 3 and get_state(conn, alert_key) != "1":
+        notify_admin(f"El feed {config.name} ha fallado {failures} veces consecutivas: {config.url}")
+        set_state(conn, alert_key, "1")
+
+
+def record_translation_health(conn: sqlite3.Connection, attempted: bool, successful: bool) -> None:
+    if not attempted:
+        return
+    failures = 0 if successful else int(get_state(conn, "translation_failures", "0")) + 1
+    set_state(conn, "translation_failures", str(failures))
+    if successful:
+        if get_state(conn, "translation_alerted") == "1":
+            notify_admin("El servicio de traducción automática vuelve a funcionar.")
+        set_state(conn, "translation_alerted", "0")
+    elif failures >= 3 and get_state(conn, "translation_alerted") != "1":
+        notify_admin("La traducción automática ha fallado en tres ejecuciones consecutivas.")
+        set_state(conn, "translation_alerted", "1")
+
+
+def record_news_activity(conn: sqlite3.Connection, has_relevant_news: bool) -> None:
+    now = int(time.time())
+    if has_relevant_news:
+        set_state(conn, "last_relevant_news_at", str(now))
+        set_state(conn, "no_news_alerted", "0")
+        return
+    last_seen = int(get_state(conn, "last_relevant_news_at", str(now)))
+    if not get_state(conn, "last_relevant_news_at"):
+        set_state(conn, "last_relevant_news_at", str(now))
+    if now - last_seen >= 48 * 3600 and get_state(conn, "no_news_alerted") != "1":
+        notify_admin("No se ha encontrado ninguna noticia relevante durante las últimas 48 horas.")
+        set_state(conn, "no_news_alerted", "1")
+
+
+def is_direct_story(story: Story) -> bool:
+    return bool(DIRECT_TERMS.search(f"{story.title} {story.summary}"))
+
+
+def build_direct_digest(stories: List[Story]) -> str:
+    parts = ["🎬 <b>Especial Nintendo Direct</b>", "", f"{len(stories)} anuncios destacados:"]
+    for story in stories[:10]:
+        parts.append(f'• <a href="{html.escape(story.link, quote=True)}">{html.escape(story.title)}</a>')
+    sources = ", ".join(dict.fromkeys(story.source for story in stories))
+    parts.extend(["", f"📰 Fuentes: {html.escape(sources)}"])
+    return "\n".join(parts)[:4096]
+
+
+def send_direct_digest(conn: sqlite3.Connection, stories: List[Story], dry_run: bool) -> bool:
+    if len(stories) < 3:
+        return False
+    message = build_direct_digest(stories)
+    if dry_run:
+        logger.info("Dry-run del especial Nintendo Direct:\n%s", message)
+        return True
+    sent = telegram_request(TELEGRAM_BOT_TOKEN, "sendMessage", {
+        "chat_id": TELEGRAM_CHAT_ID.strip(), "text": message, "parse_mode": "HTML",
+        "disable_web_page_preview": "true",
+    })
+    if sent:
+        for story in stories:
+            mark_as_sent(conn, story)
+    return sent
+
+
+def weekly_digest_is_due(conn: sqlite3.Connection, now: datetime) -> bool:
+    week_key = f"{now.isocalendar().year}-W{now.isocalendar().week:02d}"
+    return now.weekday() == 6 and now.hour >= WEEKLY_DIGEST_HOUR and get_state(conn, "last_weekly_digest") != week_key
+
+
+def send_weekly_digest(conn: sqlite3.Connection, dry_run: bool = False) -> None:
+    now = local_now()
+    if not weekly_digest_is_due(conn, now):
+        return
+    rows = conn.execute(
+        "SELECT title, link, source, relevance_score FROM sent_articles WHERE created_at >= ? "
+        "ORDER BY relevance_score DESC, created_at DESC LIMIT 5",
+        (int(time.time()) - 7 * 86400,),
+    ).fetchall()
+    if not rows:
+        return
+    parts = ["📊 <b>Lo más importante de la semana en Switch 2</b>", ""]
+    for index, (title, link, source, score) in enumerate(rows, 1):
+        parts.append(f'{index}. <a href="{html.escape(link, quote=True)}">{html.escape(title)}</a> · {html.escape(source)}')
+    message = "\n".join(parts)
+    if dry_run:
+        logger.info("Dry-run del resumen semanal:\n%s", message)
+        return
+    if telegram_request(TELEGRAM_BOT_TOKEN, "sendMessage", {
+        "chat_id": TELEGRAM_CHAT_ID.strip(), "text": message, "parse_mode": "HTML",
+        "disable_web_page_preview": "true",
+    }):
+        iso = now.isocalendar()
+        set_state(conn, "last_weekly_digest", f"{iso.year}-W{iso.week:02d}")
+
+
 def run(dry_run: bool = False) -> int:
     if not dry_run and (not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID):
         logger.error("Falta TELEGRAM_BOT_TOKEN o TELEGRAM_CHAT_ID en el entorno.")
@@ -434,21 +689,42 @@ def run(dry_run: bool = False) -> int:
         return 1
 
     conn = create_database(str(Path(DATABASE_PATH)))
+    if not dry_run:
+        process_pending_feedback(conn)
     all_stories: List[Story] = []
     for config in RSS_FEEDS:
         try:
-            all_stories.extend(fetch_feed(config))
+            feed_stories = fetch_feed(config)
+            all_stories.extend(feed_stories)
+            if not dry_run:
+                record_feed_health(conn, config, bool(feed_stories))
         except Exception as exc:
             logger.exception("Error leyendo el feed %s: %s", config.url, exc)
+            if not dry_run:
+                record_feed_health(conn, config, False)
 
-    stories = filter_fresh_stories(deduplicate_stories(prepare_stories(all_stories)))
+    stories = apply_feedback_adjustments(
+        conn, filter_fresh_stories(deduplicate_stories(prepare_stories(all_stories)))
+    )
+    if not dry_run:
+        record_news_activity(conn, bool(stories))
     stories.sort(key=lambda story: story.published_timestamp, reverse=True)
     candidates = get_unsent_stories(conn, stories)[:MAX_ARTICLES_PER_RUN * 3]
     translated = [translate_story(story) for story in candidates]
+    international = [story for story in candidates if not story.language.lower().startswith("es")]
+    if not dry_run:
+        record_translation_health(
+            conn, bool(international),
+            any(story.original_title for story in translated if not story.language.lower().startswith("es")),
+        )
     unsent = smart_deduplicate_stories(remove_recently_sent_duplicates(conn, translated))[:MAX_ARTICLES_PER_RUN]
     logger.info("Encontradas %d noticias relevantes, %d nuevas para procesar", len(stories), len(unsent))
 
-    for story in unsent:
+    direct_stories = [story for story in unsent if is_direct_story(story)]
+    digest_sent = send_direct_digest(conn, direct_stories, dry_run) if len(direct_stories) >= 3 else False
+    individual_stories = [story for story in unsent if not digest_sent or story not in direct_stories]
+
+    for story in individual_stories:
         if dry_run:
             logger.info("Dry-run (no se guarda ni se envía):\n%s", build_message(story))
             continue
@@ -457,8 +733,10 @@ def run(dry_run: bool = False) -> int:
             time.sleep(1)
         else:
             logger.warning("No se pudo enviar: %s", story.link)
+            notify_admin(f"No se pudo publicar la noticia: {story.title}\n{story.link}")
     if not unsent:
         logger.info("No hay noticias nuevas para enviar.")
+    send_weekly_digest(conn, dry_run=dry_run)
     send_daily_promo(conn, dry_run=dry_run)
     conn.close()
     return 0

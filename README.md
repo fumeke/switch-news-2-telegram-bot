@@ -18,6 +18,14 @@ Agregador de noticias para Telegram con fuentes españolas e internacionales, tr
 - Descarte de artículos con más de 48 horas y orden cronológico normalizado.
 - Detección de coberturas duplicadas aunque procedan de medios y URL diferentes.
 - Botones para abrir y compartir cada noticia directamente desde Telegram.
+- Prioridad editorial según la fiabilidad de cada fuente.
+- Resúmenes limpios de un máximo de dos frases.
+- Especial automático que agrupa los anuncios de un Nintendo Direct.
+- Valoraciones `🔥 Interesante`, `👍 Útil` y `👎 Poco relevante` almacenadas en SQLite.
+- Rotación de mensajes promocionales para evitar repeticiones.
+- Alertas privadas cuando un feed falla reiteradamente y aviso cuando se recupera.
+- Resumen semanal con las cinco noticias más relevantes.
+- Pruebas automáticas en cada push y pull request de GitHub.
 
 Las etiquetas son una clasificación heurística: `Confirmado` indica que el texto contiene señales explícitas de confirmación oficial; no sustituye una comprobación editorial.
 
@@ -29,6 +37,7 @@ Crea un archivo `.env` en la raíz (no debe subirse al repositorio):
 TELEGRAM_BOT_TOKEN=123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11
 TELEGRAM_CHAT_ID=-1001234567890
 DATABASE_PATH=seen.db
+ADMIN_CHAT_ID=123456789
 
 # Opcionales
 TRANSLATION_ENABLED=true
@@ -39,11 +48,14 @@ DUPLICATE_SIMILARITY=0.76
 CHANNEL_TIMEZONE=Europe/Madrid
 PROMO_HOUR=21
 PROMO_TEXT=¿Tienes un amigo que vive pendiente de Switch 2? Envíale este canal y que no se pierda la próxima gran noticia.
+WEEKLY_DIGEST_HOUR=20
 ```
 
 `TRANSLATION_ENABLED=false` conserva el texto original. Si el servicio de traducción no está disponible, el bot publica el original y continúa procesando el resto.
 
-El mensaje promocional se envía una sola vez al día al final de la primera ejecución a partir de `PROMO_HOUR` en `CHANNEL_TIMEZONE`. La fecha del último envío queda guardada en SQLite, por lo que un reintento de GitHub Actions no lo duplica. `PROMO_TEXT` admite el HTML compatible con Telegram.
+El mensaje promocional se envía una sola vez al día al final de la primera ejecución a partir de `PROMO_HOUR` en `CHANNEL_TIMEZONE`. Si no se define `PROMO_TEXT`, el bot rota automáticamente entre cuatro mensajes. La fecha del último envío queda guardada en SQLite, por lo que un reintento de GitHub Actions no lo duplica. `PROMO_TEXT` admite el HTML compatible con Telegram.
+
+Los domingos, a partir de `WEEKLY_DIGEST_HOUR`, se publica un resumen con las cinco noticias de mayor relevancia de los últimos siete días.
 
 ## Instalación y uso
 
@@ -60,19 +72,27 @@ El modo `--dry-run` no necesita credenciales, no envía publicaciones y tampoco 
 Las fuentes se definen como objetos `FeedConfig` al inicio de `switch_news_bot.py`:
 
 ```python
-FeedConfig("https://www.nintenderos.com/feed/", "es", "Nintenderos")
-FeedConfig("https://www.nintendolife.com/feeds/latest", "en", "Nintendo Life")
+FeedConfig("https://www.nintenderos.com/feed/", "es", "Nintenderos", 2)
+FeedConfig("https://www.nintendolife.com/feeds/latest", "en", "Nintendo Life", 3)
 ```
 
-Para añadir una fuente, indica su URL, código de idioma y nombre. Los idiomas distintos de `es` se traducen cuando la traducción está activada.
+Para añadir una fuente, indica su URL, código de idioma, nombre y fiabilidad de 1 a 3. Los idiomas distintos de `es` se traducen cuando la traducción está activada. Las fuentes de nivel 3 reciben un punto adicional de relevancia; los agregadores de nivel 1 reciben uno menos.
 
 ## Filtrado y relevancia
 
 Una mención directa a Switch 2 en el título recibe más puntuación que una mención en la descripción. Los términos de anuncio oficial, lanzamiento, precio, especificaciones, ventas o actualizaciones suman relevancia; contenido tipo sorteo, newsletter o podcast resta puntuación. Solo se procesan noticias que alcancen `MIN_RELEVANCE_SCORE`.
 
+Cuando coinciden tres o más noticias relacionadas con un Nintendo Direct, el bot publica un especial único con enlaces a todos los anuncios en lugar de inundar el canal.
+
+## Valoraciones y supervisión
+
+Los botones de valoración usan callbacks de Telegram. El bot recoge las respuestas pendientes al inicio de cada ejecución y conserva un voto por usuario y noticia. Con la ejecución horaria, la confirmación puede demorarse; para respuesta inmediata sería necesario ejecutar el bot como servicio permanente con webhook.
+
+Si se configura `ADMIN_CHAT_ID`, el administrador recibe un aviso privado después de tres fallos consecutivos de una fuente, otro cuando se recupera y alertas por publicaciones rechazadas. Añádelo también como `Repository secret` en GitHub.
+
 ## Base de datos
 
-La tabla `sent_articles` conserva título y resumen finales, título original, idioma, imagen, puntuación, clasificación, fuente y fecha. Al abrir una base antigua, las columnas nuevas se añaden automáticamente sin borrar los artículos ya registrados.
+La tabla `sent_articles` conserva título y resumen finales, título original, idioma, imagen, puntuación, clasificación, fiabilidad, fuentes relacionadas y fecha. `article_feedback` almacena las valoraciones y `bot_state` controla promociones, resúmenes, alertas y actualizaciones de Telegram. Al abrir una base antigua, las columnas nuevas se añaden automáticamente sin borrar los artículos ya registrados.
 
 ## GitHub Actions
 
@@ -80,7 +100,10 @@ El workflow `.github/workflows/switch-news.yml` ejecuta el bot cada hora. Config
 
 - `TELEGRAM_BOT_TOKEN`
 - `TELEGRAM_CHAT_ID`
+- `ADMIN_CHAT_ID` (opcional)
 
 La base `seen.db` se restaura mediante la caché del workflow para evitar publicaciones repetidas.
+
+El workflow `tests.yml` ejecuta las pruebas y valida la sintaxis en cada cambio enviado a `main` y en cada pull request.
 
 Si Telegram devuelve un error 404, revisa que el token no lleve el prefijo `bot`, no contenga espacios y coincida exactamente con el entregado por BotFather.
