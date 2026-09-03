@@ -28,7 +28,7 @@ Agregador de noticias para Telegram con fuentes españolas e internacionales, tr
 - Rotación de mensajes promocionales para evitar repeticiones.
 - Alertas privadas cuando un feed falla reiteradamente y aviso cuando se recupera.
 - Resumen semanal con las cinco noticias más relevantes.
-- Resumen matinal con las tres noticias más importantes del día anterior.
+- Resumen matinal como primera publicación del día, a las 08:00, con las tres noticias más importantes del día anterior.
 - Calendario fijado con lanzamientos confirmados de los próximos 60 días.
 - Informe privado dominical con las estadísticas principales del canal.
 - Pruebas automáticas en cada push y pull request de GitHub.
@@ -56,7 +56,7 @@ CHANNEL_TIMEZONE=Europe/Madrid
 PROMO_HOUR=21
 PROMO_TEXT=¿Tienes un amigo que vive pendiente de Switch 2? Envíale este canal y que no se pierda la próxima gran noticia.
 WEEKLY_DIGEST_HOUR=20
-MORNING_DIGEST_HOUR=9
+MORNING_DIGEST_HOUR=8
 CALENDAR_DAYS_AHEAD=60
 CALENDAR_REMINDER_HOUR=10
 ADMIN_STATS_HOUR=22
@@ -70,7 +70,7 @@ El mensaje promocional se envía una sola vez al día al final de la primera eje
 
 Los domingos, a partir de `WEEKLY_DIGEST_HOUR`, se publica un resumen con las cinco noticias de mayor relevancia de los últimos siete días.
 
-A partir de `MORNING_DIGEST_HOUR`, el bot publica una sola vez las tres noticias con mayor relevancia del día anterior y cierra con “¡A ver qué nos trae hoy Nintendo Switch 2!”. Los enlaces aparecen únicamente en botones.
+A partir de `MORNING_DIGEST_HOUR`, el bot dedica la primera ejecución exclusivamente a publicar una sola vez las tres noticias con mayor relevancia del día anterior y cierra con “¡A ver qué nos trae hoy Nintendo Switch 2!”. La selección descarta titulares relacionados con un tema ya elegido para ofrecer tres noticias distintas siempre que haya suficientes candidatos. Antes de esa hora no publica noticias, por lo que el resumen siempre abre la jornada; las noticias nuevas se procesan en la siguiente ejecución. Los enlaces aparecen únicamente en botones.
 
 ## Calendario de lanzamientos
 

@@ -35,7 +35,7 @@ DUPLICATE_SIMILARITY = float(environ.get("DUPLICATE_SIMILARITY", "0.76"))
 CHANNEL_TIMEZONE = environ.get("CHANNEL_TIMEZONE", "Europe/Madrid")
 ADMIN_CHAT_ID = environ.get("ADMIN_CHAT_ID", "")
 PROMO_HOUR = int(environ.get("PROMO_HOUR", "21"))
-MORNING_DIGEST_HOUR = int(environ.get("MORNING_DIGEST_HOUR", "9"))
+MORNING_DIGEST_HOUR = int(environ.get("MORNING_DIGEST_HOUR", "8"))
 WEEKLY_DIGEST_HOUR = int(environ.get("WEEKLY_DIGEST_HOUR", "20"))
 CALENDAR_DAYS_AHEAD = int(environ.get("CALENDAR_DAYS_AHEAD", "60"))
 CALENDAR_REMINDER_HOUR = int(environ.get("CALENDAR_REMINDER_HOUR", "10"))
@@ -391,6 +391,28 @@ def titles_are_similar(first: str, second: str) -> bool:
     second_words = {word[:6] if len(word) > 6 else word for word in second_key.split()}
     token_score = len(first_words & second_words) / max(1, len(first_words | second_words))
     return sequence_score >= DUPLICATE_SIMILARITY or token_score >= 0.67
+
+
+def digest_titles_are_related(first: str, second: str) -> bool:
+    """Use a broader topic match when a digest needs editorial variety."""
+    if titles_are_similar(first, second):
+        return True
+    first_words = title_key(first).split()
+    second_words = title_key(second).split()
+    first_phrases = {tuple(first_words[index:index + 3]) for index in range(len(first_words) - 2)}
+    second_phrases = {tuple(second_words[index:index + 3]) for index in range(len(second_words) - 2)}
+    return bool(first_phrases & second_phrases)
+
+
+def select_diverse_digest_rows(rows: Iterable[tuple], limit: int = 3) -> list:
+    selected = []
+    for row in rows:
+        if any(digest_titles_are_related(row[0], existing[0]) for existing in selected):
+            continue
+        selected.append(row)
+        if len(selected) == limit:
+            break
+    return selected
 
 
 def smart_deduplicate_stories(stories: Iterable[Story]) -> List[Story]:
@@ -902,31 +924,36 @@ def build_morning_digest(rows: list) -> str:
     return "\n".join(parts)
 
 
-def send_morning_digest(conn: sqlite3.Connection, dry_run: bool = False) -> None:
+def send_morning_digest(conn: sqlite3.Connection, dry_run: bool = False) -> bool:
     now = local_now()
     if not morning_digest_is_due(conn, now):
-        return
+        return False
     start, end = previous_day_bounds(now)
-    rows = conn.execute(
+    candidates = conn.execute(
         "SELECT title, link, source, relevance_score FROM sent_articles "
         "WHERE created_at >= ? AND created_at < ? AND link IS NOT NULL AND link != '' "
-        "ORDER BY relevance_score DESC, created_at DESC LIMIT 3",
+        "ORDER BY relevance_score DESC, created_at DESC LIMIT 25",
         (start, end),
     ).fetchall()
+    rows = select_diverse_digest_rows(candidates)
     if not rows:
-        return
+        if not dry_run:
+            set_state(conn, "last_morning_digest", now.date().isoformat())
+        logger.info("No hay noticias de ayer para incluir en el resumen matinal.")
+        return True
     message = build_morning_digest(rows)
     keyboard = {"inline_keyboard": [[
         {"text": f"{index}️⃣ Leer noticia", "url": row[1]}
     ] for index, row in enumerate(rows, 1)]}
     if dry_run:
         logger.info("Dry-run del resumen de ayer:\n%s", message)
-        return
+        return True
     if telegram_request(TELEGRAM_BOT_TOKEN, "sendMessage", {
         "chat_id": TELEGRAM_CHAT_ID.strip(), "text": message, "parse_mode": "HTML",
         "disable_web_page_preview": "true", "reply_markup": json.dumps(keyboard),
     }):
         set_state(conn, "last_morning_digest", now.date().isoformat())
+    return True
 
 
 def calendar_rows(conn: sqlite3.Connection, today=None) -> list:
@@ -1177,6 +1204,20 @@ def run(dry_run: bool = False) -> int:
     conn = create_database(str(Path(DATABASE_PATH)))
     if not dry_run:
         process_pending_feedback(conn)
+
+    now = local_now()
+    if now.hour < MORNING_DIGEST_HOUR:
+        logger.info(
+            "No se publican noticias antes del resumen matinal de las %02d:00.",
+            MORNING_DIGEST_HOUR,
+        )
+        conn.close()
+        return 0
+    if morning_digest_is_due(conn, now):
+        send_morning_digest(conn, dry_run=dry_run)
+        conn.close()
+        return 0
+
     all_stories: List[Story] = []
     for config in RSS_FEEDS:
         try:
@@ -1229,7 +1270,6 @@ def run(dry_run: bool = False) -> int:
             notify_admin(f"No se pudo publicar la noticia: {story.title}\n{story.link}")
     if not unsent:
         logger.info("No hay noticias nuevas para enviar.")
-    send_morning_digest(conn, dry_run=dry_run)
     send_weekly_digest(conn, dry_run=dry_run)
     send_daily_promo(conn, dry_run=dry_run)
     send_calendar_reminder(conn, dry_run=dry_run)

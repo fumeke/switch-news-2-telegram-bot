@@ -244,9 +244,9 @@ def test_translation_protects_switch_2_brand(monkeypatch):
 
 
 def test_morning_digest_uses_previous_day_and_only_runs_once(tmp_path, monkeypatch):
-    monkeypatch.setattr(bot, "MORNING_DIGEST_HOUR", 9)
+    monkeypatch.setattr(bot, "MORNING_DIGEST_HOUR", 8)
     conn = bot.create_database(str(tmp_path / "morning.db"))
-    now = datetime(2026, 9, 3, 9, 0, tzinfo=ZoneInfo("Europe/Madrid"))
+    now = datetime(2026, 9, 3, 8, 0, tzinfo=ZoneInfo("Europe/Madrid"))
     assert bot.morning_digest_is_due(conn, now)
     start, end = bot.previous_day_bounds(now)
     assert end - start == 86400
@@ -256,6 +256,61 @@ def test_morning_digest_uses_previous_day_and_only_runs_once(tmp_path, monkeypat
     assert "A ver qué nos trae hoy Nintendo Switch 2" in message
     bot.set_state(conn, "last_morning_digest", now.date().isoformat())
     assert not bot.morning_digest_is_due(conn, now)
+
+
+def test_morning_digest_selects_three_different_topics():
+    rows = [
+        ("Mario Kart 8 Deluxe se ve precioso en Nintendo Switch 2", "https://example.com/1", "Fuente A", 10),
+        ("Mario Kart 8 Deluxe recibe una actualización sorpresa para Switch 2", "https://example.com/2", "Fuente B", 9),
+        ("Nintendo anuncia un nuevo juego de Zelda para Switch 2", "https://example.com/3", "Fuente C", 8),
+        ("Metroid Prime 4 confirma su fecha de lanzamiento", "https://example.com/4", "Fuente D", 7),
+    ]
+
+    selected = bot.select_diverse_digest_rows(rows)
+
+    assert [row[1] for row in selected] == [
+        "https://example.com/1",
+        "https://example.com/3",
+        "https://example.com/4",
+    ]
+
+
+def test_run_before_eight_does_not_fetch_or_publish_news(tmp_path, monkeypatch):
+    now = datetime(2026, 9, 3, 7, 59, tzinfo=ZoneInfo("Europe/Madrid"))
+    monkeypatch.setattr(bot, "DATABASE_PATH", str(tmp_path / "before-eight.db"))
+    monkeypatch.setattr(bot, "local_now", lambda: now)
+    monkeypatch.setattr(bot, "fetch_feed", lambda config: (_ for _ in ()).throw(AssertionError("feed leído")))
+
+    assert bot.run(dry_run=True) == 0
+
+
+def test_first_run_from_eight_only_sends_morning_digest(tmp_path, monkeypatch):
+    now = datetime(2026, 9, 3, 8, 0, tzinfo=ZoneInfo("Europe/Madrid"))
+    database_path = tmp_path / "at-eight.db"
+    conn = bot.create_database(str(database_path))
+    yesterday = datetime(2026, 9, 2, 12, 0, tzinfo=ZoneInfo("Europe/Madrid"))
+    item = story("La noticia más importante de ayer")
+    item.relevance_score = 10
+    conn.execute(
+        "INSERT INTO sent_articles (id, title, link, published, source, created_at, relevance_score) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (item.id, item.title, item.link, item.published, item.source, int(yesterday.timestamp()), item.relevance_score),
+    )
+    conn.commit()
+    conn.close()
+    calls = []
+    monkeypatch.setattr(bot, "DATABASE_PATH", str(database_path))
+    monkeypatch.setattr(bot, "local_now", lambda: now)
+    monkeypatch.setattr(bot, "TELEGRAM_BOT_TOKEN", "123456:abcdefghijklmnopqrstuvwxyzABCDEFGHI")
+    monkeypatch.setattr(bot, "TELEGRAM_CHAT_ID", "-1001234567890")
+    monkeypatch.setattr(bot, "validate_telegram_config", lambda token, chat_id: True)
+    monkeypatch.setattr(bot, "process_pending_feedback", lambda conn: None)
+    monkeypatch.setattr(bot, "telegram_request", lambda token, method, payload: calls.append(payload) or True)
+    monkeypatch.setattr(bot, "fetch_feed", lambda config: (_ for _ in ()).throw(AssertionError("feed leído")))
+
+    assert bot.run() == 0
+    assert len(calls) == 1
+    assert "Las 3 noticias más importantes de ayer" in calls[0]["text"]
 
 
 def test_confirmed_release_date_is_extracted_but_rumor_is_rejected():
