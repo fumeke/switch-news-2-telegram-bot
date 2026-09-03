@@ -42,6 +42,7 @@ Crea un archivo `.env` en la raíz (no debe subirse al repositorio):
 ```env
 TELEGRAM_BOT_TOKEN=123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11
 TELEGRAM_CHAT_ID=-1001234567890
+TELEGRAM_CHANNEL_URL=https://t.me/nombre_del_canal
 DATABASE_PATH=seen.db
 ADMIN_CHAT_ID=123456789
 
@@ -65,7 +66,7 @@ ADMIN_STATS_HOUR=22
 
 Las traducciones de titular y resumen se realizan por separado: si una falla, se conserva la otra. Para noticias inglesas, el mensaje siempre avisa antes del enlace de que la página de destino está en inglés. Los resultados se guardan durante siete días en `translation_cache`.
 
-El mensaje promocional se envía una sola vez al día al final de la primera ejecución a partir de `PROMO_HOUR` en `CHANNEL_TIMEZONE`. Si no se define `PROMO_TEXT`, el bot rota automáticamente entre cuatro mensajes. La fecha del último envío queda guardada en SQLite, por lo que un reintento de GitHub Actions no lo duplica. `PROMO_TEXT` admite el HTML compatible con Telegram.
+El mensaje promocional se envía una sola vez al día al final de la primera ejecución a partir de `PROMO_HOUR` en `CHANNEL_TIMEZONE` e incluye un botón que abre directamente la acción de compartir el canal. El bot obtiene el enlace a partir del nombre público del canal; `TELEGRAM_CHANNEL_URL` permite indicarlo explícitamente y es necesario si Telegram no devuelve un nombre público o un enlace de invitación. Si no se define `PROMO_TEXT`, el bot rota automáticamente entre cuatro mensajes. La fecha del último envío queda guardada en SQLite, por lo que un reintento de GitHub Actions no lo duplica. `PROMO_TEXT` admite el HTML compatible con Telegram.
 
 Los domingos, a partir de `WEEKLY_DIGEST_HOUR`, se publica un resumen con las cinco noticias de mayor relevancia de los últimos siete días.
 

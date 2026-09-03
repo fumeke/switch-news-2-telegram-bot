@@ -143,6 +143,35 @@ def test_promotional_messages_rotate(monkeypatch):
     assert first != second
 
 
+def test_daily_promo_includes_channel_share_button(tmp_path, monkeypatch):
+    conn = bot.create_database(str(tmp_path / "promo.db"))
+    calls = []
+    now = datetime(2026, 9, 2, 21, 0, tzinfo=ZoneInfo("Europe/Madrid"))
+    monkeypatch.setattr(bot, "local_now", lambda: now)
+    monkeypatch.setattr(bot, "TELEGRAM_CHANNEL_URL", "https://t.me/switch_news_2")
+    monkeypatch.setattr(bot, "telegram_request", lambda token, method, payload: calls.append(payload) or True)
+
+    bot.send_daily_promo(conn)
+
+    keyboard = json.loads(calls[0]["reply_markup"])["inline_keyboard"]
+    assert keyboard == [[{
+        "text": "📣 Compartir canal",
+        "url": "https://t.me/share/url?url=https%3A%2F%2Ft.me%2Fswitch_news_2&text="
+               "Sigue%20las%20noticias%20de%20Nintendo%20Switch%202%20en%20este%20canal.",
+    }]]
+
+
+def test_channel_share_url_is_resolved_from_telegram_username(monkeypatch):
+    monkeypatch.setattr(bot, "TELEGRAM_CHANNEL_URL", "")
+    monkeypatch.setattr(bot, "TELEGRAM_CHAT_ID", "-1001234567890")
+    monkeypatch.setattr(
+        bot,
+        "telegram_call",
+        lambda token, method, payload: {"ok": True, "result": {"username": "switch_news_2"}},
+    )
+    assert bot.get_channel_share_url() == "https://t.me/switch_news_2"
+
+
 def test_weekly_digest_only_runs_once_on_sunday(tmp_path, monkeypatch):
     monkeypatch.setattr(bot, "WEEKLY_DIGEST_HOUR", 20)
     conn = bot.create_database(str(tmp_path / "weekly.db"))

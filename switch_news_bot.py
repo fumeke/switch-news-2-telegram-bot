@@ -25,6 +25,7 @@ load_dotenv()
 
 TELEGRAM_BOT_TOKEN = environ.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = environ.get("TELEGRAM_CHAT_ID", "")
+TELEGRAM_CHANNEL_URL = environ.get("TELEGRAM_CHANNEL_URL", "")
 DATABASE_PATH = environ.get("DATABASE_PATH", "seen.db")
 TRANSLATION_ENABLED = environ.get("TRANSLATION_ENABLED", "true").lower() in {"1", "true", "yes", "si"}
 MIN_RELEVANCE_SCORE = int(environ.get("MIN_RELEVANCE_SCORE", "4"))
@@ -749,6 +750,20 @@ def daily_promo_text(now: datetime) -> str:
     return PROMO_MESSAGES[now.toordinal() % len(PROMO_MESSAGES)]
 
 
+def get_channel_share_url() -> str:
+    configured_url = TELEGRAM_CHANNEL_URL.strip()
+    if configured_url:
+        return configured_url
+    chat_id = TELEGRAM_CHAT_ID.strip()
+    if chat_id.startswith("@"):
+        return f"https://t.me/{chat_id[1:]}"
+    response = telegram_call(TELEGRAM_BOT_TOKEN, "getChat", {"chat_id": chat_id})
+    chat = response.get("result", {}) if response else {}
+    if chat.get("username"):
+        return f"https://t.me/{chat['username']}"
+    return chat.get("invite_link", "")
+
+
 def send_daily_promo(conn: sqlite3.Connection, dry_run: bool = False) -> None:
     now = local_now()
     if not promo_is_due(conn, now):
@@ -763,6 +778,18 @@ def send_daily_promo(conn: sqlite3.Connection, dry_run: bool = False) -> None:
         "parse_mode": "HTML",
         "disable_web_page_preview": "true",
     }
+    channel_url = get_channel_share_url()
+    if channel_url:
+        share_url = "https://t.me/share/url?url=" + quote(channel_url, safe="") + "&text=" + quote(
+            "Sigue las noticias de Nintendo Switch 2 en este canal.", safe=""
+        )
+        payload["reply_markup"] = json.dumps({"inline_keyboard": [[
+            {"text": "📣 Compartir canal", "url": share_url},
+        ]]})
+    else:
+        logger.warning(
+            "No se pudo obtener el enlace del canal; configura TELEGRAM_CHANNEL_URL para mostrar el botón de compartir."
+        )
     if telegram_request(TELEGRAM_BOT_TOKEN, "sendMessage", payload):
         mark_promo_as_sent(conn, now)
         logger.info("Mensaje promocional diario enviado.")
