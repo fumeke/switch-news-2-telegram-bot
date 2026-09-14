@@ -720,12 +720,41 @@ def set_state(conn: sqlite3.Connection, key: str, value: str) -> None:
     conn.commit()
 
 
+def notify_new_subscriber(change: dict) -> bool:
+    if not ADMIN_CHAT_ID.strip():
+        return True
+    chat = change.get("chat", {})
+    target = TELEGRAM_CHAT_ID.strip()
+    if str(chat.get("id", "")) != target and (
+        not target.startswith("@") or target[1:].lower() != chat.get("username", "").lower()
+    ):
+        return True
+
+    def is_member(member: dict) -> bool:
+        return member.get("status") in {"member", "administrator", "creator"} or (
+            member.get("status") == "restricted" and member.get("is_member", False)
+        )
+
+    old = change.get("old_chat_member", {})
+    new = change.get("new_chat_member", {})
+    user = new.get("user", {})
+    if is_member(old) or not is_member(new) or user.get("is_bot"):
+        return True
+    name = " ".join(filter(None, [user.get("first_name"), user.get("last_name")])) or "Nuevo usuario"
+    username = f" (@{user['username']})" if user.get("username") else ""
+    return telegram_request(TELEGRAM_BOT_TOKEN, "sendMessage", {
+        "chat_id": ADMIN_CHAT_ID.strip(),
+        "text": "<b>Nuevo suscriptor en el canal</b>\n\n" + html.escape(name + username),
+        "parse_mode": "HTML",
+    })
+
+
 def process_pending_feedback(conn: sqlite3.Connection) -> None:
     offset = int(get_state(conn, "telegram_update_offset", "0"))
     try:
         response = requests.get(
             f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN.strip()}/getUpdates",
-            params={"offset": offset, "timeout": 0, "allowed_updates": json.dumps(["callback_query"])},
+            params={"offset": offset, "timeout": 0, "allowed_updates": json.dumps(["callback_query", "chat_member"])},
             timeout=15,
         )
         data = response.json()
@@ -737,6 +766,11 @@ def process_pending_feedback(conn: sqlite3.Connection) -> None:
         return
     latest_offset = offset
     for update in data.get("result", []):
+        if int(update["update_id"]) < offset:
+            continue
+        if "chat_member" in update and not notify_new_subscriber(update["chat_member"]):
+            logger.warning("No se pudo enviar el aviso de nuevo suscriptor; se reintentará.")
+            break
         latest_offset = max(latest_offset, int(update["update_id"]) + 1)
         callback = update.get("callback_query", {})
         match = re.fullmatch(r"rate:(hot|useful|low):([a-f0-9]{16})", callback.get("data", ""))

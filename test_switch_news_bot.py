@@ -6,6 +6,55 @@ from zoneinfo import ZoneInfo
 import switch_news_bot as bot
 
 
+def test_new_subscriber_notification_filters_and_escapes(monkeypatch):
+    monkeypatch.setattr(bot, "ADMIN_CHAT_ID", " admin ")
+    monkeypatch.setattr(bot, "TELEGRAM_CHAT_ID", "@channel")
+    calls = []
+    monkeypatch.setattr(bot, "telegram_request", lambda token, method, payload: calls.append(payload) or True)
+    change = {
+        "chat": {"id": -100123, "username": "Channel"},
+        "old_chat_member": {"status": "left"},
+        "new_chat_member": {"status": "member", "user": {"first_name": "Ana & Luis", "username": "ana"}},
+    }
+    assert bot.notify_new_subscriber(change)
+    assert calls[0]["chat_id"] == "admin"
+    assert "Ana &amp; Luis (@ana)" in calls[0]["text"]
+    calls.clear()
+    for old, new in [("member", "administrator"), ("member", "left"), ("left", "kicked")]:
+        change["old_chat_member"]["status"] = old
+        change["new_chat_member"]["status"] = new
+        assert bot.notify_new_subscriber(change)
+    change["old_chat_member"]["status"] = "left"
+    change["new_chat_member"]["status"] = "member"
+    change["chat"]["username"] = "other"
+    assert bot.notify_new_subscriber(change)
+    assert not calls
+
+
+def test_subscriber_update_retries_failed_delivery(tmp_path, monkeypatch):
+    conn = bot.create_database(str(tmp_path / "updates.db"))
+    updates = [{"update_id": 10, "chat_member": {}}, {"update_id": 11, "chat_member": {}}]
+
+    class Response:
+        status_code = 200
+
+        def json(self):
+            return {"ok": True, "result": updates}
+
+    def get(url, params, timeout):
+        assert "chat_member" in json.loads(params["allowed_updates"])
+        return Response()
+
+    monkeypatch.setattr(bot.requests, "get", get)
+    outcomes = iter([True, False, True])
+    monkeypatch.setattr(bot, "notify_new_subscriber", lambda change: next(outcomes))
+    bot.process_pending_feedback(conn)
+    assert bot.get_state(conn, "telegram_update_offset") == "11"
+    bot.process_pending_feedback(conn)
+    assert bot.get_state(conn, "telegram_update_offset") == "12"
+    conn.close()
+
+
 def story(title, summary="", language="es"):
     return bot.Story("id", title, "https://example.com/?a=1&b=2", summary, "hoy", "Fuente & Co", language)
 

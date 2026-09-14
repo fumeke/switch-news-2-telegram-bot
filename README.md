@@ -80,6 +80,8 @@ El calendario es un único mensaje que se edita solamente cuando cambia el conte
 
 ## Estadísticas del administrador
 
+Con `ADMIN_CHAT_ID` configurado, también recibirás un mensaje privado con el nombre y el usuario (si dispone de él) de cada nuevo suscriptor. El bot debe ser administrador del canal para recibir los eventos `chat_member`. Los avisos se procesan en cada ejecución, incluso fuera del horario de publicación; no se envían en `--dry-run`. Se avisa también si alguien sale y vuelve a entrar, pero no por bajas, cambios de permisos ni incorporaciones de bots. Si el envío falla, se reintenta en la siguiente ejecución. Telegram conserva los eventos pendientes durante un máximo de 24 horas; no se notifican incorporaciones anteriores a la activación de esta función.
+
 Cada domingo, a partir de `ADMIN_STATS_HOUR`, el bot envía a `ADMIN_CHAT_ID` un informe privado con suscriptores y variación semanal, publicaciones, confirmaciones y rumores, relevancia media, traducciones, valoraciones, fuentes más utilizadas, noticia principal, próximos lanzamientos y salud de los feeds. Si Telegram no permite consultar el número de miembros, el resto del informe se envía igualmente. SQLite registra la semana para evitar duplicados.
 
 ## Instalación y uso
