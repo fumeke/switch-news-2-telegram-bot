@@ -252,7 +252,7 @@ def test_morning_digest_uses_previous_day_and_only_runs_once(tmp_path, monkeypat
     assert end - start == 86400
     rows = [("Noticia A", "https://example.com/a", "Fuente", 10)]
     message = bot.build_morning_digest(rows)
-    assert "Las 3 noticias más importantes de ayer" in message
+    assert "La noticia más importante de ayer" in message
     assert "A ver qué nos trae hoy Nintendo Switch 2" in message
     bot.set_state(conn, "last_morning_digest", now.date().isoformat())
     assert not bot.morning_digest_is_due(conn, now)
@@ -273,6 +273,36 @@ def test_morning_digest_selects_three_different_topics():
         "https://example.com/3",
         "https://example.com/4",
     ]
+
+
+def test_morning_digest_groups_numbered_games_from_real_headlines():
+    titles = [
+        "Diablo 4 llegará a Nintendo Switch 2 la semana que viene",
+        "Colección Diablo® IV: La era del odio para Nintendo Switch 2 - Nintendo",
+        "Diablo IV estará disponible en Nintendo Switch 2 el 15 de septiembre",
+        "Nintendo anuncia un nuevo juego de Zelda para Switch 2",
+        "Metroid Prime 4 confirma su fecha de lanzamiento",
+    ]
+    rows = [(title, f"https://example.com/{i}", "Fuente", 10 - i)
+            for i, title in enumerate(titles)]
+    assert bot.select_diverse_digest_rows(rows) == [rows[0], rows[3], rows[4]]
+    assert bot.select_diverse_digest_rows(rows[:3]) == [rows[0]]
+
+
+def test_digest_numbered_topics_do_not_merge_platforms_dates_or_sequels():
+    for first, second in [
+        ("Diablo IV llega pronto", "Diablo III recibe contenido"),
+        ("Zelda llegará a Switch 2", "Metroid se estrena en Nintendo Switch 2"),
+        ("Zelda llega el 15 de septiembre", "Metroid se estrena el 15 de octubre"),
+        ("Actualización 4 de Zelda", "Actualización 4 de Metroid"),
+    ]:
+        assert not (bot.digest_numbered_topics(first) & bot.digest_numbered_topics(second))
+
+
+def test_morning_digest_heading_matches_two_topics():
+    rows = [("Zelda", "https://example.com/a", "Fuente", 10),
+            ("Metroid", "https://example.com/b", "Fuente", 9)]
+    assert "Las 2 noticias más importantes de ayer" in bot.build_morning_digest(rows)
 
 
 def test_run_before_eight_does_not_fetch_or_publish_news(tmp_path, monkeypatch):
@@ -310,7 +340,7 @@ def test_first_run_from_eight_only_sends_morning_digest(tmp_path, monkeypatch):
 
     assert bot.run() == 0
     assert len(calls) == 1
-    assert "Las 3 noticias más importantes de ayer" in calls[0]["text"]
+    assert "☕ <b>La noticia más importante de ayer</b>" in calls[0]["text"]
 
 
 def test_confirmed_release_date_is_extracted_but_rumor_is_rejected():

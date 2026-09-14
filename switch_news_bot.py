@@ -393,9 +393,27 @@ def titles_are_similar(first: str, second: str) -> bool:
     return sequence_score >= DUPLICATE_SIMILARITY or token_score >= 0.67
 
 
+def digest_numbered_topics(title: str) -> set:
+    """Recognize numbered game names independently of the surrounding headline."""
+    normalized = unicodedata.normalize("NFKD", clean_text(title).lower())
+    normalized = "".join(char for char in normalized if not unicodedata.combining(char))
+    roman_numbers = {"i": "1", "ii": "2", "iii": "3", "iv": "4", "v": "5",
+                     "vi": "6", "vii": "7", "viii": "8", "ix": "9", "x": "10"}
+    normalized = re.sub(r"[®™]", "", normalized)
+    normalized = re.sub(r"\b(?:nintendo\s+)?switch\s*2\b", "", normalized)
+    words = re.findall(r"[a-z]+|\d+", normalized)
+    words = [roman_numbers.get(word, word) for word in words]
+    generic = {"el", "de", "del", "en", "este", "dia", "version", "actualizacion",
+               "parche", "los", "las", "top", "of", "on", "the", "update", "patch"}
+    return {(name, number) for name, number in zip(words, words[1:])
+            if name.isalpha() and name not in generic and number.isdigit()}
+
+
 def digest_titles_are_related(first: str, second: str) -> bool:
     """Use a broader topic match when a digest needs editorial variety."""
     if titles_are_similar(first, second):
+        return True
+    if digest_numbered_topics(first) & digest_numbered_topics(second):
         return True
     first_words = title_key(first).split()
     second_words = title_key(second).split()
@@ -917,7 +935,9 @@ def previous_day_bounds(now: datetime) -> tuple:
 
 
 def build_morning_digest(rows: list) -> str:
-    parts = ["☕ <b>Las 3 noticias más importantes de ayer</b>", ""]
+    heading = ("La noticia más importante de ayer" if len(rows) == 1
+               else f"Las {len(rows)} noticias más importantes de ayer")
+    parts = [f"☕ <b>{heading}</b>", ""]
     for index, (title, link, source, score) in enumerate(rows, 1):
         parts.append(f"{index}. <b>{html.escape(title)}</b> · {html.escape(source)}")
     parts.extend(["", "🎮 Comienza una nueva jornada. ¡A ver qué nos trae hoy Nintendo Switch 2!"])
@@ -932,7 +952,7 @@ def send_morning_digest(conn: sqlite3.Connection, dry_run: bool = False) -> bool
     candidates = conn.execute(
         "SELECT title, link, source, relevance_score FROM sent_articles "
         "WHERE created_at >= ? AND created_at < ? AND link IS NOT NULL AND link != '' "
-        "ORDER BY relevance_score DESC, created_at DESC LIMIT 25",
+        "ORDER BY relevance_score DESC, created_at DESC",
         (start, end),
     ).fetchall()
     rows = select_diverse_digest_rows(candidates)
