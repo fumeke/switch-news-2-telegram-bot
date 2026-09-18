@@ -113,7 +113,7 @@ Cuando coinciden tres o más noticias relacionadas con un Nintendo Direct, el bo
 
 ## Valoraciones y supervisión
 
-Los botones de valoración usan callbacks de Telegram. El bot recoge las respuestas pendientes al inicio de cada ejecución y conserva un voto por usuario y noticia. Con la ejecución horaria, la confirmación puede demorarse; para respuesta inmediata sería necesario ejecutar el bot como servicio permanente con webhook.
+Los botones de valoración usan callbacks de Telegram. El bot recoge las respuestas pendientes al inicio de cada ejecución y conserva un voto por usuario y noticia. La confirmación puede demorarse hasta la siguiente ejecución programada; para respuesta inmediata sería necesario ejecutar el bot como servicio permanente con webhook.
 
 Si se configura `ADMIN_CHAT_ID`, el administrador recibe un aviso privado después de tres fallos consecutivos de una fuente, otro cuando se recupera y alertas por publicaciones rechazadas. Añádelo también como `Repository secret` en GitHub.
 
@@ -123,13 +123,15 @@ La tabla `sent_articles` conserva título y resumen finales, título original, i
 
 ## GitHub Actions
 
-El workflow `.github/workflows/switch-news.yml` ejecuta el bot cada hora. Configura en `Settings` → `Secrets and variables` → `Actions`:
+El workflow `.github/workflows/switch-news.yml` ejecuta el bot diariamente a las 09:00, 12:00, 15:00, 19:00 y 20:30, con una última ejecución a las 21:00 que incluye el mensaje para compartir el canal. Los horarios usan la zona `Europe/Madrid` y se ajustan automáticamente al horario de verano e invierno. La ejecución de las 09:00 se dedica al resumen matinal. Configura en `Settings` → `Secrets and variables` → `Actions`:
 
 - `TELEGRAM_BOT_TOKEN`
 - `TELEGRAM_CHAT_ID`
 - `ADMIN_CHAT_ID` (opcional)
 
 La base `seen.db` se restaura mediante la caché del workflow para evitar publicaciones repetidas.
+
+El workflow configura `ADMIN_STATS_HOUR=21` para mantener el informe privado de los domingos en la última ejecución del día.
 
 El workflow `tests.yml` ejecuta las pruebas y valida la sintaxis en cada cambio enviado a `main` y en cada pull request.
 
