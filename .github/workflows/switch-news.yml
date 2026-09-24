@@ -1,15 +1,29 @@
 name: Enviar noticias Switch 2 a Telegram
 
 on:
+  # Respaldo durante la migración. CRON_JOB_ENABLED=true omite estos envíos.
   schedule:
-    - cron: '0 9,12,15,18,21 * * *' # 09:00, 12:00, 15:00, 19:00 y promoción a las 21:00
+    - cron: '0 9,12,15,18,21 * * *' # 09:00, 12:00, 15:00, 18:00 y promoción a las 21:00
       timezone: Europe/Madrid
     - cron: '30 20 * * *' # 20:30
       timezone: Europe/Madrid
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Probar sin enviar mensajes a Telegram ni guardar la base'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: switch-news-publish
+  cancel-in-progress: false
 
 jobs:
   publish:
+    if: github.event_name != 'schedule' || vars.CRON_JOB_ENABLED != 'true'
     runs-on: ubuntu-latest
 
     steps:
@@ -18,11 +32,13 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: '3.11'
+          cache: pip
       - name: Restaurar base de noticias enviadas
-        uses: actions/cache@v5
+        id: restore-db
+        uses: actions/cache/restore@v5
         with:
           path: seen.db
-          key: seen-db-${{ github.run_id }}
+          key: seen-db-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
             seen-db-
       - name: Install dependencies
@@ -36,4 +52,16 @@ jobs:
           DATABASE_PATH: seen.db
           CHANNEL_TIMEZONE: Europe/Madrid
           ADMIN_STATS_HOUR: '21'
-        run: python switch_news_bot.py
+          DRY_RUN: ${{ inputs.dry_run && 'true' || 'false' }}
+        run: |
+          if [ "$DRY_RUN" = "true" ]; then
+            python switch_news_bot.py --dry-run
+          else
+            python switch_news_bot.py
+          fi
+      - name: Guardar base de noticias enviadas
+        if: ${{ always() && !cancelled() && !inputs.dry_run && steps.restore-db.outcome == 'success' && hashFiles('seen.db') != '' }}
+        uses: actions/cache/save@v5
+        with:
+          path: seen.db
+          key: seen-db-${{ github.run_id }}-${{ github.run_attempt }}

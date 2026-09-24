@@ -123,13 +123,16 @@ La tabla `sent_articles` conserva título y resumen finales, título original, i
 
 ## GitHub Actions
 
-El workflow `.github/workflows/switch-news.yml` ejecuta el bot diariamente a las 09:00, 12:00, 15:00, 19:00 y 20:30, con una última ejecución a las 21:00 que incluye el mensaje para compartir el canal. Los horarios usan la zona `Europe/Madrid` y se ajustan automáticamente al horario de verano e invierno. La ejecución de las 09:00 se dedica al resumen matinal. Configura en `Settings` → `Secrets and variables` → `Actions`:
+El workflow `.github/workflows/switch-news.yml` permite ejecutar el bot desde cron-job.org mediante `workflow_dispatch`, o manualmente desde Actions. Consulta la [guía de configuración de cron-job.org](docs/cron-job.md). Los horarios son 09:00, 12:00, 15:00, 18:00, 20:30 y 21:00 en `Europe/Madrid`; la primera ejecución se dedica al resumen matinal y la última incluye el mensaje para compartir el canal. Configura en `Settings` → `Secrets and variables` → `Actions`:
 
 - `TELEGRAM_BOT_TOKEN`
 - `TELEGRAM_CHAT_ID`
+- `TELEGRAM_CHANNEL_URL` (opcional)
 - `ADMIN_CHAT_ID` (opcional)
 
-La base `seen.db` se restaura mediante la caché del workflow para evitar publicaciones repetidas.
+La programación nativa de GitHub sigue activa durante la configuración. Una vez comprobado cron-job.org, establece la variable de repositorio `CRON_JOB_ENABLED=true` para omitir los envíos disparados por `schedule`. No deshabilites el workflow completo: también impediría las activaciones externas. El programador externo evita depender del disparador horario de GitHub, pero el arranque sigue sujeto a la disponibilidad de sus ejecutores.
+
+La base `seen.db` se restaura mediante la caché del workflow para evitar publicaciones repetidas. Las ejecuciones se serializan para que no publiquen simultáneamente. El modo `dry_run` permite comprobar la integración sin enviar mensajes ni guardar cambios en la caché de la base. La caché sigue siendo almacenamiento temporal, por lo que no sustituye una copia de seguridad permanente.
 
 El workflow configura `ADMIN_STATS_HOUR=21` para mantener el informe privado de los domingos en la última ejecución del día.
 
