@@ -35,6 +35,9 @@ DUPLICATE_SIMILARITY = float(environ.get("DUPLICATE_SIMILARITY", "0.76"))
 CHANNEL_TIMEZONE = environ.get("CHANNEL_TIMEZONE", "Europe/Madrid")
 ADMIN_CHAT_ID = environ.get("ADMIN_CHAT_ID", "")
 PROMO_HOUR = int(environ.get("PROMO_HOUR", "21"))
+APP_PROMO_WEEKDAY = int(environ.get("APP_PROMO_WEEKDAY", "2"))  # lunes=0, miércoles=2
+APP_PROMO_HOUR = int(environ.get("APP_PROMO_HOUR", "20"))
+APP_PROMO_MINUTE = int(environ.get("APP_PROMO_MINUTE", "30"))
 MORNING_DIGEST_HOUR = int(environ.get("MORNING_DIGEST_HOUR", "8"))
 WEEKLY_DIGEST_HOUR = int(environ.get("WEEKLY_DIGEST_HOUR", "20"))
 CALENDAR_DAYS_AHEAD = int(environ.get("CALENDAR_DAYS_AHEAD", "60"))
@@ -51,6 +54,14 @@ PROMO_MESSAGES = (
     "Invita a tus amigos al canal y vivid juntos cada anuncio de Nintendo Switch 2.",
     "🔔 <b>¿Conoces a otro fan de Nintendo?</b>\n\n"
     "Envíale este canal y ayúdale a no perderse anuncios, lanzamientos y sorpresas.",
+)
+APP_STORE_URL = "https://apps.apple.com/hn/app/switch-eshop-saver/id1394019089"
+GOOGLE_PLAY_URL = "https://play.google.com/store/apps/details?id=com.morcillo.switcheshopsaver"
+APP_PROMO_TEXT = (
+    "🔥 <b>¿Pagando de más por tus juegos de Nintendo Switch?</b>\n\n"
+    "Con <b>Switch eShop Saver</b> puedes buscar el mejor precio para juegos de "
+    "<b>Switch y Switch 2</b> y aprovechar las mejores ofertas de la eShop. 🎮💸\n\n"
+    "Tu próximo juego puede costarte menos. ¡Descarga la app y empieza a ahorrar! 👇"
 )
 TELEGRAM_TOKEN_PATTERN = re.compile(r"^\d+:[A-Za-z0-9_-]{35,}$")
 
@@ -871,6 +882,40 @@ def send_daily_promo(conn: sqlite3.Connection, dry_run: bool = False) -> None:
         logger.warning("No se pudo enviar el mensaje promocional diario; se reintentará en otra ejecución.")
 
 
+def app_promo_is_due(conn: sqlite3.Connection, now: datetime) -> bool:
+    scheduled_time = (APP_PROMO_HOUR, APP_PROMO_MINUTE)
+    if now.weekday() != APP_PROMO_WEEKDAY or (now.hour, now.minute) < scheduled_time:
+        return False
+    iso = now.isocalendar()
+    current_week = f"{iso.year}-W{iso.week:02d}"
+    return get_state(conn, "last_app_promo_week") != current_week
+
+
+def send_weekly_app_promo(conn: sqlite3.Connection, dry_run: bool = False) -> None:
+    now = local_now()
+    if not app_promo_is_due(conn, now):
+        return
+    if dry_run:
+        logger.info("Dry-run de la promoción semanal de Switch eShop Saver:\n%s", APP_PROMO_TEXT)
+        return
+    payload = {
+        "chat_id": TELEGRAM_CHAT_ID.strip(),
+        "text": APP_PROMO_TEXT,
+        "parse_mode": "HTML",
+        "disable_web_page_preview": "true",
+        "reply_markup": json.dumps({"inline_keyboard": [
+            [{"text": "🍎 Descargar en App Store (iOS)", "url": APP_STORE_URL}],
+            [{"text": "▶️ Descargar en Google Play (Android)", "url": GOOGLE_PLAY_URL}],
+        ]}),
+    }
+    if telegram_request(TELEGRAM_BOT_TOKEN, "sendMessage", payload):
+        iso = now.isocalendar()
+        set_state(conn, "last_app_promo_week", f"{iso.year}-W{iso.week:02d}")
+        logger.info("Promoción semanal de Switch eShop Saver enviada.")
+    else:
+        logger.warning("No se pudo enviar la promoción semanal de la app; se reintentará esta semana.")
+
+
 def notify_admin(text: str) -> None:
     if not ADMIN_CHAT_ID:
         return
@@ -1325,6 +1370,7 @@ def run(dry_run: bool = False) -> int:
     if not unsent:
         logger.info("No hay noticias nuevas para enviar.")
     send_weekly_digest(conn, dry_run=dry_run)
+    send_weekly_app_promo(conn, dry_run=dry_run)
     send_daily_promo(conn, dry_run=dry_run)
     send_calendar_reminder(conn, dry_run=dry_run)
     sync_release_calendar(conn, dry_run=dry_run)

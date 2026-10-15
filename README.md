@@ -17,6 +17,7 @@ Agregador de noticias para Telegram con fuentes españolas e internacionales, tr
 - Migración automática de bases SQLite creadas por versiones anteriores.
 - Límite de publicaciones por ejecución para evitar ráfagas en el canal.
 - Mensaje promocional diario al final de la ejecución de las 21:00, sin duplicados.
+- Promoción semanal de Switch eShop Saver los miércoles a las 20:30, con botones para iOS y Android.
 - Descarte de artículos con más de 48 horas y orden cronológico normalizado.
 - Detección de coberturas duplicadas aunque procedan de medios y URL diferentes.
 - Botones para abrir y compartir cada noticia directamente desde Telegram.
@@ -55,6 +56,9 @@ DUPLICATE_SIMILARITY=0.76
 CHANNEL_TIMEZONE=Europe/Madrid
 PROMO_HOUR=21
 PROMO_TEXT=¿Tienes un amigo que vive pendiente de Switch 2? Envíale este canal y que no se pierda la próxima gran noticia.
+APP_PROMO_WEEKDAY=2
+APP_PROMO_HOUR=20
+APP_PROMO_MINUTE=30
 WEEKLY_DIGEST_HOUR=20
 MORNING_DIGEST_HOUR=8
 CALENDAR_DAYS_AHEAD=60
@@ -67,6 +71,8 @@ ADMIN_STATS_HOUR=22
 Las traducciones de titular y resumen se realizan por separado: si una falla, se conserva la otra. Para noticias inglesas, el mensaje siempre avisa antes del enlace de que la página de destino está en inglés. Los resultados se guardan durante siete días en `translation_cache`.
 
 El mensaje promocional se envía una sola vez al día al final de la primera ejecución a partir de `PROMO_HOUR` en `CHANNEL_TIMEZONE` e incluye un botón que abre directamente la acción de compartir el canal. El bot obtiene el enlace a partir del nombre público del canal; `TELEGRAM_CHANNEL_URL` permite indicarlo explícitamente y es necesario si Telegram no devuelve un nombre público o un enlace de invitación. Si no se define `PROMO_TEXT`, el bot rota automáticamente entre cuatro mensajes. La fecha del último envío queda guardada en SQLite, por lo que un reintento de GitHub Actions no lo duplica. `PROMO_TEXT` admite el HTML compatible con Telegram.
+
+La promoción de Switch eShop Saver se publica como mensaje independiente una vez por semana, al final de la ejecución del miércoles a las 20:30, con botones directos a App Store y Google Play. El día usa la numeración de Python (`0` es lunes y `6` domingo) y puede cambiarse con `APP_PROMO_WEEKDAY`; la hora y los minutos se controlan con `APP_PROMO_HOUR` y `APP_PROMO_MINUTE`. La semana del último envío se guarda en SQLite para evitar duplicados.
 
 Los domingos, a partir de `WEEKLY_DIGEST_HOUR`, se publica un resumen con las cinco noticias de mayor relevancia de los últimos siete días.
 

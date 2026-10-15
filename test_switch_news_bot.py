@@ -210,6 +210,41 @@ def test_daily_promo_includes_channel_share_button(tmp_path, monkeypatch):
     }]]
 
 
+def test_app_promo_is_only_due_once_on_wednesday_after_2030(tmp_path, monkeypatch):
+    conn = bot.create_database(str(tmp_path / "app-promo.db"))
+    monkeypatch.setattr(bot, "APP_PROMO_WEEKDAY", 2)
+    before = datetime(2026, 9, 2, 20, 29, tzinfo=ZoneInfo("Europe/Madrid"))
+    scheduled = datetime(2026, 9, 2, 20, 30, tzinfo=ZoneInfo("Europe/Madrid"))
+
+    assert not bot.app_promo_is_due(conn, before)
+    assert bot.app_promo_is_due(conn, scheduled)
+    bot.set_state(conn, "last_app_promo_week", "2026-W36")
+    assert not bot.app_promo_is_due(conn, scheduled)
+    assert not bot.app_promo_is_due(
+        conn, datetime(2026, 9, 3, 20, 30, tzinfo=ZoneInfo("Europe/Madrid"))
+    )
+    assert bot.app_promo_is_due(
+        conn, datetime(2026, 9, 9, 20, 30, tzinfo=ZoneInfo("Europe/Madrid"))
+    )
+
+
+def test_weekly_app_promo_has_store_buttons(tmp_path, monkeypatch):
+    conn = bot.create_database(str(tmp_path / "app-promo.db"))
+    calls = []
+    now = datetime(2026, 9, 2, 20, 30, tzinfo=ZoneInfo("Europe/Madrid"))
+    monkeypatch.setattr(bot, "local_now", lambda: now)
+    monkeypatch.setattr(bot, "telegram_request", lambda token, method, payload: calls.append(payload) or True)
+
+    bot.send_weekly_app_promo(conn)
+
+    assert "Switch y Switch 2" in calls[0]["text"]
+    assert json.loads(calls[0]["reply_markup"])["inline_keyboard"] == [
+        [{"text": "🍎 Descargar en App Store (iOS)", "url": bot.APP_STORE_URL}],
+        [{"text": "▶️ Descargar en Google Play (Android)", "url": bot.GOOGLE_PLAY_URL}],
+    ]
+    assert bot.get_state(conn, "last_app_promo_week") == "2026-W36"
+
+
 def test_channel_share_url_is_resolved_from_telegram_username(monkeypatch):
     monkeypatch.setattr(bot, "TELEGRAM_CHANNEL_URL", "")
     monkeypatch.setattr(bot, "TELEGRAM_CHAT_ID", "-1001234567890")
