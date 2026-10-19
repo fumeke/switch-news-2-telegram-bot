@@ -41,6 +41,7 @@ APP_PROMO_MINUTE = int(environ.get("APP_PROMO_MINUTE", "30"))
 MORNING_DIGEST_HOUR = int(environ.get("MORNING_DIGEST_HOUR", "8"))
 WEEKLY_DIGEST_HOUR = int(environ.get("WEEKLY_DIGEST_HOUR", "20"))
 CALENDAR_DAYS_AHEAD = int(environ.get("CALENDAR_DAYS_AHEAD", "60"))
+CALENDAR_AVAILABLE_DAYS = int(environ.get("CALENDAR_AVAILABLE_DAYS", "30"))
 CALENDAR_REMINDER_HOUR = int(environ.get("CALENDAR_REMINDER_HOUR", "10"))
 ADMIN_STATS_HOUR = int(environ.get("ADMIN_STATS_HOUR", "22"))
 CUSTOM_PROMO_TEXT = environ.get("PROMO_TEXT", "")
@@ -266,6 +267,11 @@ def parse_release_date(text: str):
 
 def release_name_from_title(title: str) -> str:
     cleaned = re.sub(r"^(?:confirmed|confirmado|oficial|noticia)[:\s-]+", "", clean_text(title), flags=re.I)
+    call_of_duty = re.search(
+        r"\b(Call Of Duty)\b.*?\b(Modern Warfare\s+\d+)\b", cleaned, re.I
+    )
+    if call_of_duty:
+        return f"{call_of_duty.group(1)}: {call_of_duty.group(2)}"[:160]
     review_match = re.search(
         r"\breviews?\s+for\s+(.+?)\s+on\s+(?:nintendo\s+)?switch\b", cleaned, re.I
     )
@@ -274,13 +280,37 @@ def release_name_from_title(title: str) -> str:
     review_title = re.match(r"^(?:review|análisis|preview)[:\s-]+(.+?)(?:\s+\(|\s+-|$)", cleaned, re.I)
     if review_title:
         return review_title.group(1).strip(" :-–—")[:160]
+
+    # Los feeds suelen publicar varias noticias sobre un lanzamiento el mismo día.
+    # Extraemos el juego de esas construcciones antes de usar el titular entero.
+    subject_patterns = (
+        r"^el director de (.+?)\s+(?:elogia|habla|explica|detalla|comenta)\b",
+        r"^(?:nuevos?\s+)?gameplays? de (.+?)\s+(?:en|para)\s+(?:nintendo\s+)?switch\s*2\b",
+        r"^someten .*?\b(?:demo|versi[oó]n) de (.+?)\s+(?:en|para)\s+(?:nintendo\s+)?switch\s*2\b",
+        r"^tras .*?\b(?:demo|versi[oó]n) de (.+?)\s+(?:en|para)\s+(?:nintendo\s+)?switch\s*2\b",
+        r"^fecha de lanzamiento de (.+?)(?:\s+(?:en|para)\s+)?(?:nintendo\s+)?switch\s*2\b",
+        r"^baja de precio .*?\b(?:descuento|oferta)\s+(.+?)(?:\s+(?:en|para)\s+(?:nintendo\s+)?switch\s*2\b|$)",
+        r"^as[ií] es .*\bde (.+?)(?:\s+(?:en|para)\s+(?:nintendo\s+)?switch\s*2\b|$)",
+    )
+    for pattern in subject_patterns:
+        match = re.search(pattern, cleaned, re.I)
+        if match:
+            cleaned = match.group(1).strip(" :-–—")
+            break
+
     prefix = re.split(
-        r"\b(?:launches|releases|arrives|release date|llega(?:rá)?|se lanza|sale a la venta|fecha de lanzamiento)\b",
+        r"\b(?:launches|releases|arrives|release date|llega(?:rá)?|se lanza|sale a la venta|"
+        r"fecha de lanzamiento|anuncia|confirma|detalla|presenta|lanza|estrena|brilla|"
+        r"ya ha estrenado|permite|recibe)\b",
         cleaned,
         maxsplit=1,
         flags=re.I,
     )[0].strip(" :-–—")
-    return (prefix if len(prefix) >= 3 else cleaned)[:160]
+    name = prefix if len(prefix) >= 3 else cleaned
+    name = re.sub(r"\s+(?:en|para)\s+(?:Nintendo\s+)?Switch\s*2\b.*$", "", name, flags=re.I)
+    name = re.sub(r"\s*[x×]\s*Bayonetta\b.*$", "", name, flags=re.I)
+    name = re.sub(r":?\s+Complete Edition\b.*$", "", name, flags=re.I)
+    return name.strip(" :-–—")[:160]
 
 
 def extract_release(story: Story, today=None):
@@ -1057,35 +1087,52 @@ def send_morning_digest(conn: sqlite3.Connection, dry_run: bool = False) -> bool
 
 def calendar_rows(conn: sqlite3.Connection, today=None) -> list:
     today = today or local_now().date()
+    start = today - timedelta(days=CALENDAR_AVAILABLE_DAYS)
     end = today + timedelta(days=CALENDAR_DAYS_AHEAD)
-    return conn.execute(
+    stored_rows = conn.execute(
         "SELECT name, release_date, source, link FROM releases WHERE release_date >= ? AND release_date <= ? "
         "ORDER BY release_date, name",
-        (today.isoformat(), end.isoformat()),
+        (start.isoformat(), end.isoformat()),
     ).fetchall()
+    # Normalizar también registros antiguos para que el calendario se arregle sin
+    # tener que borrar la base de datos.
+    unique = {}
+    for name, release_date, source, link in stored_rows:
+        game_name = release_name_from_title(name)
+        key = (release_date, title_key(game_name))
+        unique.setdefault(key, (game_name, release_date, source, link))
+    return sorted(unique.values(), key=lambda row: (row[1], title_key(row[0])))
+
+
+def amazon_affiliate_url(game_name: str) -> str:
+    return f"https://www.amazon.es/s?k={quote(game_name)}&tag=desarrolloapl-21"
 
 
 def build_release_calendar(rows: list, now: datetime) -> str:
-    parts = ["🗓 <b>Próximos lanzamientos para Nintendo Switch 2</b>"]
+    parts = ["🗓 <b>Lanzamientos para Nintendo Switch 2</b>"]
+    today = now.date()
+    available = [row for row in rows if datetime.strptime(row[1], "%Y-%m-%d").date() <= today]
+    upcoming = [row for row in rows if datetime.strptime(row[1], "%Y-%m-%d").date() > today]
+
+    if available:
+        parts.extend(["", "<b>Ya disponibles</b>"])
+        for name, release_date, source, link in available:
+            parsed = datetime.strptime(release_date, "%Y-%m-%d").date()
+            amazon_url = html.escape(amazon_affiliate_url(name), quote=True)
+            parts.append(
+                f'• {parsed.day} de {SPANISH_MONTH_NAMES[parsed.month]} — '
+                f'<a href="{amazon_url}">{html.escape(name)}</a>'
+            )
+
     current_month = None
-    for name, release_date, source, link in rows:
+    for name, release_date, source, link in upcoming:
         parsed = datetime.strptime(release_date, "%Y-%m-%d").date()
         month_key = (parsed.year, parsed.month)
         if month_key != current_month:
             parts.extend(["", f"<b>{SPANISH_MONTH_NAMES[parsed.month].capitalize()} {parsed.year}</b>"])
             current_month = month_key
-        parts.append(f"• {parsed.day} de {SPANISH_MONTH_NAMES[parsed.month]} — {html.escape(name)} · {html.escape(source)}")
-    parts.extend([
-        "", "✅ Solo fechas confirmadas",
-        f"🔄 Actualizado: {now.strftime('%d/%m/%Y %H:%M')}",
-    ])
+        parts.append(f"• {parsed.day} de {SPANISH_MONTH_NAMES[parsed.month]} — {html.escape(name)}")
     return "\n".join(parts)[:4096]
-
-
-def calendar_keyboard(rows: list) -> dict:
-    return {"inline_keyboard": [[
-        {"text": f"🎮 {name[:45]}", "url": link}
-    ] for name, release_date, source, link in rows[:10] if link]}
 
 
 def sync_release_calendar(conn: sqlite3.Connection, dry_run: bool = False) -> None:
@@ -1093,21 +1140,23 @@ def sync_release_calendar(conn: sqlite3.Connection, dry_run: bool = False) -> No
     rows = calendar_rows(conn, today=now.date())
     if not rows:
         return
-    keyboard = calendar_keyboard(rows)
-    content_hash = hashlib.sha256(json.dumps([rows, keyboard], sort_keys=True).encode()).hexdigest()
+    message = build_release_calendar(rows, now)
+    content_hash = hashlib.sha256(message.encode()).hexdigest()
     if get_state(conn, "calendar_content_hash") == content_hash:
         return
-    message = build_release_calendar(rows, now)
     if dry_run:
         logger.info("Dry-run del calendario de lanzamientos:\n%s", message)
         return
     message_id = get_state(conn, "calendar_message_id")
     common = {
         "chat_id": TELEGRAM_CHAT_ID.strip(), "text": message, "parse_mode": "HTML",
-        "disable_web_page_preview": "true", "reply_markup": json.dumps(keyboard),
+        "disable_web_page_preview": "true",
     }
     if message_id:
-        result = telegram_call(TELEGRAM_BOT_TOKEN, "editMessageText", {**common, "message_id": message_id})
+        result = telegram_call(TELEGRAM_BOT_TOKEN, "editMessageText", {
+            **common, "message_id": message_id,
+            "reply_markup": json.dumps({"inline_keyboard": []}),
+        })
         if result is None:
             failures = int(get_state(conn, "calendar_edit_failures", "0")) + 1
             set_state(conn, "calendar_edit_failures", str(failures))

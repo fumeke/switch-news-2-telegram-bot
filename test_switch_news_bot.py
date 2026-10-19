@@ -442,6 +442,73 @@ def test_release_name_is_cleaned_from_review_roundup():
     assert bot.release_name_from_title(title) == "Orbitals"
 
 
+def test_release_names_are_reduced_to_the_game_in_news_headlines():
+    assert bot.release_name_from_title(
+        "Fatal Fury: City of the Wolves confirma a Reina de Tekken como DLC"
+    ) == "Fatal Fury: City of the Wolves"
+    assert bot.release_name_from_title(
+        "El director de Stellar Blade habla sobre el desarrollo"
+    ) == "Stellar Blade"
+    assert bot.release_name_from_title(
+        "Metaphor: ReFantazio lanza demo en Nintendo Switch 2"
+    ) == "Metaphor: ReFantazio"
+    assert bot.release_name_from_title(
+        "Resumen: las reseñas de Call Of Duty: la campaña de Modern Warfare 4 ya están disponibles"
+    ) == "Call Of Duty: Modern Warfare 4"
+
+
+def test_calendar_deduplicates_old_headlines_and_only_shows_date_and_game(tmp_path):
+    conn = bot.create_database(str(tmp_path / "clean-calendar.db"))
+    rows = [
+        ("one", "Stellar Blade estrena tráiler", "2026-11-05", "Fuente A", "https://example.com/1", 1),
+        ("two", "El director de Stellar Blade habla sobre el desarrollo", "2026-11-05", "Fuente B", "https://example.com/2", 1),
+    ]
+    conn.executemany(
+        "INSERT INTO releases (release_key, name, release_date, source, link, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+        rows,
+    )
+    conn.commit()
+
+    calendar_rows = bot.calendar_rows(conn, today=datetime(2026, 10, 19).date())
+    assert len(calendar_rows) == 1
+    assert calendar_rows[0][:2] == ("Stellar Blade", "2026-11-05")
+    message = bot.build_release_calendar(
+        calendar_rows, datetime(2026, 10, 19, 12, 1, tzinfo=ZoneInfo("Europe/Madrid"))
+    )
+    assert "• 5 de noviembre — Stellar Blade" in message
+    assert "Fuente A" not in message
+    assert "Solo fechas confirmadas" not in message
+    assert "Actualizado:" not in message
+
+
+def test_available_releases_link_to_amazon_with_affiliate_tag(tmp_path, monkeypatch):
+    monkeypatch.setattr(bot, "CALENDAR_AVAILABLE_DAYS", 30)
+    conn = bot.create_database(str(tmp_path / "available-calendar.db"))
+    conn.executemany(
+        "INSERT INTO releases (release_key, name, release_date, source, link, updated_at) "
+        "VALUES (?, ?, ?, ?, ?, ?)",
+        [
+            ("available", "Mario Kart World", "2026-10-10", "Fuente", "https://example.com/1", 1),
+            ("upcoming", "Metroid Prime 4", "2026-11-10", "Fuente", "https://example.com/2", 1),
+            ("too-old", "Donkey Kong Bananza", "2026-09-01", "Fuente", "https://example.com/3", 1),
+        ],
+    )
+    conn.commit()
+
+    rows = bot.calendar_rows(conn, today=datetime(2026, 10, 19).date())
+    message = bot.build_release_calendar(
+        rows, datetime(2026, 10, 19, 12, 1, tzinfo=ZoneInfo("Europe/Madrid"))
+    )
+
+    assert "<b>Ya disponibles</b>" in message
+    assert (
+        '<a href="https://www.amazon.es/s?k=Mario%20Kart%20World&amp;tag=desarrolloapl-21">'
+        "Mario Kart World</a>"
+    ) in message
+    assert "Donkey Kong Bananza" not in message
+    assert ">Metroid Prime 4</a>" not in message
+
+
 def test_release_calendar_is_created_pinned_and_not_reedited_without_changes(tmp_path, monkeypatch):
     conn = bot.create_database(str(tmp_path / "calendar.db"))
     item = story("Metroid Prime 4 se lanza el 18 de septiembre de 2026 para Nintendo Switch 2")
@@ -462,6 +529,7 @@ def test_release_calendar_is_created_pinned_and_not_reedited_without_changes(tmp
     assert [call[0] for call in calls] == ["sendMessage", "pinChatMessage"]
     assert bot.get_state(conn, "calendar_message_id") == "123"
     assert "Metroid Prime 4" in calls[0][1]["text"]
+    assert "reply_markup" not in calls[0][1]
     calls.clear()
     bot.sync_release_calendar(conn)
     assert calls == []

@@ -62,6 +62,7 @@ APP_PROMO_MINUTE=30
 WEEKLY_DIGEST_HOUR=20
 MORNING_DIGEST_HOUR=8
 CALENDAR_DAYS_AHEAD=60
+CALENDAR_AVAILABLE_DAYS=30
 CALENDAR_REMINDER_HOUR=10
 ADMIN_STATS_HOUR=22
 ```
@@ -80,9 +81,9 @@ A partir de `MORNING_DIGEST_HOUR`, el bot dedica la primera ejecución exclusiva
 
 ## Calendario de lanzamientos
 
-El bot detecta fechas completas asociadas explícitamente a un lanzamiento de Switch 2, siempre que la noticia no sea un rumor y la fuente tenga fiabilidad suficiente. Conserva los datos en la tabla `releases` y muestra los próximos `CALENDAR_DAYS_AHEAD` días.
+El bot detecta fechas completas asociadas explícitamente a un lanzamiento de Switch 2, siempre que la noticia no sea un rumor y la fuente tenga fiabilidad suficiente. Conserva los datos en la tabla `releases`, muestra los próximos `CALENDAR_DAYS_AHEAD` días y mantiene los lanzamientos recientes durante `CALENDAR_AVAILABLE_DAYS` días.
 
-El calendario es un único mensaje que se edita solamente cuando cambia el contenido. Al crearlo, el bot intenta fijarlo en el canal; para ello necesita permiso de administrador para fijar mensajes. Cada lunes, a partir de `CALENDAR_REMINDER_HOUR`, publica un recordatorio breve para consultar el calendario fijado. Las expresiones imprecisas como “próximamente” o “este otoño” no se incorporan.
+El calendario es un único mensaje sin botones, con una línea `fecha — juego` por lanzamiento. Los títulos de la sección «Ya disponibles» enlazan a una búsqueda de Amazon España con el tag de afiliado `desarrolloapl-21`; los juegos futuros no llevan enlace. Las noticias sobre el mismo juego y fecha se agrupan para evitar duplicados. El mensaje se edita solamente cuando cambia el contenido. Al crearlo, el bot intenta fijarlo en el canal; para ello necesita permiso de administrador para fijar mensajes. Cada lunes, a partir de `CALENDAR_REMINDER_HOUR`, publica un recordatorio breve para consultar el calendario fijado. Las expresiones imprecisas como “próximamente” o “este otoño” no se incorporan.
 
 ## Estadísticas del administrador
 
