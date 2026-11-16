@@ -25,7 +25,6 @@ Agregador de noticias para Telegram con fuentes españolas e internacionales, tr
 - Prioridad editorial según la fiabilidad de cada fuente.
 - Resúmenes limpios de un máximo de dos frases.
 - Especial automático que agrupa los anuncios de un Nintendo Direct.
-- Valoraciones `🔥 Interesante`, `👍 Útil` y `👎 Poco relevante` almacenadas en SQLite.
 - Rotación de mensajes promocionales para evitar repeticiones.
 - Alertas privadas cuando un feed falla reiteradamente y aviso cuando se recupera.
 - Resumen semanal con las cinco noticias más relevantes.

@@ -1,6 +1,7 @@
 import sqlite3
 import json
 from datetime import datetime
+from urllib.parse import quote
 from zoneinfo import ZoneInfo
 
 import switch_news_bot as bot
@@ -141,12 +142,12 @@ def test_telegram_story_includes_read_and_share_buttons(monkeypatch):
     monkeypatch.setattr(bot, "telegram_request", lambda token, method, payload: calls.append(payload) or True)
     item = story("Nueva actualización de Switch 2")
     assert bot.send_telegram_story("token", "chat", item)
-    keyboard = json.loads(calls[0]["reply_markup"])["inline_keyboard"][0]
+    rows = json.loads(calls[0]["reply_markup"])["inline_keyboard"]
+    assert len(rows) == 1
+    keyboard = rows[0]
     assert keyboard[0] == {"text": "📰 Leer noticia", "url": item.link}
     assert keyboard[1]["text"] == "🔗 Compartir"
     assert keyboard[1]["url"].startswith("https://t.me/share/url?")
-    feedback_buttons = json.loads(calls[0]["reply_markup"])["inline_keyboard"][1]
-    assert [button["text"] for button in feedback_buttons] == ["🔥 Interesante", "👍 Útil", "👎 Poco relevante"]
 
 
 def test_concise_summary_uses_at_most_two_sentences():
@@ -190,6 +191,9 @@ def test_promotional_messages_rotate(monkeypatch):
     first = bot.daily_promo_text(datetime(2026, 9, 1, tzinfo=ZoneInfo("Europe/Madrid")))
     second = bot.daily_promo_text(datetime(2026, 9, 2, tzinfo=ZoneInfo("Europe/Madrid")))
     assert first != second
+    assert bot.channel_share_text(datetime(2026, 9, 1, tzinfo=ZoneInfo("Europe/Madrid"))) != bot.channel_share_text(
+        datetime(2026, 9, 2, tzinfo=ZoneInfo("Europe/Madrid"))
+    )
 
 
 def test_daily_promo_includes_channel_share_button(tmp_path, monkeypatch):
@@ -203,11 +207,11 @@ def test_daily_promo_includes_channel_share_button(tmp_path, monkeypatch):
     bot.send_daily_promo(conn)
 
     keyboard = json.loads(calls[0]["reply_markup"])["inline_keyboard"]
-    assert keyboard == [[{
-        "text": "📣 Compartir canal",
-        "url": "https://t.me/share/url?url=https%3A%2F%2Ft.me%2Fswitch_news_2&text="
-               "Sigue%20las%20noticias%20de%20Nintendo%20Switch%202%20en%20este%20canal.",
-    }]]
+    assert keyboard[0][0]["text"] == "📣 Compartir canal"
+    assert keyboard[0][0]["url"].startswith(
+        "https://t.me/share/url?url=https%3A%2F%2Ft.me%2Fswitch_news_2&text="
+    )
+    assert quote(bot.channel_share_text(now), safe="") in keyboard[0][0]["url"]
 
 
 def test_app_promo_is_only_due_once_on_wednesday_after_2030(tmp_path, monkeypatch):
@@ -264,6 +268,46 @@ def test_weekly_digest_only_runs_once_on_sunday(tmp_path, monkeypatch):
     iso = sunday.isocalendar()
     bot.set_state(conn, "last_weekly_digest", f"{iso.year}-W{iso.week:02d}")
     assert not bot.weekly_digest_is_due(conn, sunday)
+
+
+def test_weekly_digest_prioritizes_impact_and_avoids_repeated_topics(tmp_path):
+    conn = bot.create_database(str(tmp_path / "weekly-ranking.db"))
+    now = datetime(2026, 9, 6, 20, 0, tzinfo=ZoneInfo("Europe/Madrid"))
+    stories = [
+        ("review", "Reseña: Harold Halibut para Nintendo Switch 2", 10, "noticia", 3),
+        ("zelda-a", "Nintendo anuncia un nuevo juego de Zelda para Switch 2", 9, "confirmado", 3),
+        ("zelda-b", "Nuevo juego de Zelda anunciado para Nintendo Switch 2", 10, "confirmado", 3),
+        ("metroid", "Metroid Prime 4 confirma su fecha de lanzamiento", 8, "confirmado", 3),
+    ]
+    for offset, (story_id, title, relevance, status, reliability) in enumerate(stories):
+        conn.execute(
+            "INSERT INTO sent_articles "
+            "(id, title, link, source, created_at, relevance_score, status, reliability, feedback_key) "
+            "VALUES (?, ?, ?, 'Fuente', ?, ?, ?, ?, ?)",
+            (story_id, title, f"https://example.com/{story_id}", int(now.timestamp()) - offset,
+             relevance, status, reliability, story_id),
+        )
+    conn.commit()
+
+    selected = bot.select_weekly_digest_rows(conn, now)
+
+    assert "Zelda" in selected[0][0]
+    assert sum("Zelda" in row[0] for row in selected) == 1
+    assert selected[1][0] == "Metroid Prime 4 confirma su fecha de lanzamiento"
+    assert selected[-1][0] == "Reseña: Harold Halibut para Nintendo Switch 2"
+
+
+def test_weekly_digest_format_is_attractive_and_escapes_html():
+    rows = [("Zelda & <Hyrule>", "https://example.com/?a=1&b=2", "Fuente & Co", 9,
+             "confirmado", 3, "", 0, 0, 0)]
+
+    message = bot.build_weekly_digest(rows)
+
+    assert "🏆 <b>La noticia clave de la semana</b>" in message
+    assert "1️⃣ ✅" in message
+    assert "Zelda &amp; &lt;Hyrule&gt;" in message
+    assert 'href="https://example.com/?a=1&amp;b=2"' in message
+    assert "Confirmado · Fuente &amp; Co" in message
 
 
 def test_reader_feedback_adjusts_source_score(tmp_path):
@@ -564,7 +608,7 @@ def test_admin_weekly_stats_include_key_channel_metrics(tmp_path, monkeypatch):
     assert "Suscriptores: <b>250</b>" in message
     assert "Noticias publicadas: <b>1</b>" in message
     assert "Confirmadas: 1" in message
-    assert "🔥 1" in message
+    assert "Valoraciones" not in message
     assert "Fuente &amp; Co" in message
     iso = sunday.isocalendar()
     bot.set_state(conn, "last_admin_stats", f"{iso.year}-W{iso.week:02d}")

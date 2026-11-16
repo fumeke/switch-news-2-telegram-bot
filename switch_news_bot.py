@@ -46,15 +46,33 @@ CALENDAR_REMINDER_HOUR = int(environ.get("CALENDAR_REMINDER_HOUR", "10"))
 ADMIN_STATS_HOUR = int(environ.get("ADMIN_STATS_HOUR", "22"))
 CUSTOM_PROMO_TEXT = environ.get("PROMO_TEXT", "")
 PROMO_MESSAGES = (
-    "🎮 <b>La actualidad de Nintendo se disfruta más en compañía.</b>\n\n"
-    "¿Tienes un amigo que vive pendiente de Switch 2? "
-    "Envíale este canal y que no se pierda la próxima gran noticia. 🚀",
-    "🚀 <b>Que la próxima noticia de Switch 2 no te pille solo.</b>\n\n"
-    "Comparte el canal con ese amigo que siempre quiere enterarse el primero.",
-    "🍄 <b>Una buena partida se comparte. Las buenas noticias, también.</b>\n\n"
-    "Invita a tus amigos al canal y vivid juntos cada anuncio de Nintendo Switch 2.",
-    "🔔 <b>¿Conoces a otro fan de Nintendo?</b>\n\n"
-    "Envíale este canal y ayúdale a no perderse anuncios, lanzamientos y sorpresas.",
+    "🎮 <b>Las buenas noticias saben mejor cuando se comparten.</b>\n\n"
+    "Si tienes a alguien con quien siempre hablas de Nintendo, invítale al canal. "
+    "Así la próxima novedad de Switch 2 os pilla a los dos. 💬",
+    "🍄 <b>Seguro que conoces a alguien tan nintendero como tú.</b>\n\n"
+    "Mándale el canal y ayúdale a seguir anuncios, juegos y fechas importantes sin tener que buscarlos.",
+    "🚀 <b>La próxima gran noticia de Switch 2 puede llegar en cualquier momento.</b>\n\n"
+    "¿Quién debería enterarse contigo? Comparte el canal con esa persona. 👇",
+    "🤝 <b>Este canal crece de la mejor forma: de fan a fan.</b>\n\n"
+    "Si te resulta útil, compártelo con un amigo al que también le apasione Nintendo. Gracias por estar aquí ❤️",
+    "🔔 <b>Menos ruido. Más Nintendo Switch 2.</b>\n\n"
+    "Aquí reunimos las noticias que de verdad importan. Si conoces a alguien que agradecería este resumen, invítale.",
+    "👀 <b>Ese amigo que siempre pregunta «¿esto cuándo sale?» necesita este canal.</b>\n\n"
+    "Compárteselo y tendrá anuncios y fechas de Switch 2 siempre a mano. 😄",
+    "✨ <b>Una recomendación tuya vale más que cualquier anuncio.</b>\n\n"
+    "Si disfrutas del canal, envíaselo hoy a otro fan de Nintendo. Quizá acabas de descubrirle su nuevo sitio favorito.",
+    "🕹️ <b>Noticias para jugar; amigos para comentarlas.</b>\n\n"
+    "Invita a esa persona con la que debates cada Nintendo Direct y vivid juntos lo que viene para Switch 2.",
+)
+CHANNEL_SHARE_MESSAGES = (
+    "Te paso este canal de noticias de Nintendo Switch 2. Está muy bien para enterarse de lo importante sin tanto ruido 🎮",
+    "Creo que este canal de Nintendo Switch 2 te va a gustar: reúne anuncios, juegos y fechas importantes 🍄",
+    "Para que la próxima gran noticia de Switch 2 no te pille por sorpresa 👀",
+    "He pensado en ti al ver este canal de Nintendo Switch 2. Échale un vistazo 🎮",
+    "Si quieres seguir lo importante de Nintendo Switch 2 sin buscar en mil sitios, este canal viene genial 🔔",
+    "Aquí tienes el canal para no volver a preguntarme cuándo sale cada juego de Switch 2 😄",
+    "Te recomiendo este canal para estar al día de Nintendo Switch 2 ✨",
+    "Para comentar juntos el próximo Nintendo Direct y todo lo que venga después 🕹️",
 )
 APP_STORE_URL = "https://apps.apple.com/hn/app/switch-eshop-saver/id1394019089"
 GOOGLE_PLAY_URL = "https://play.google.com/store/apps/details?id=com.morcillo.switcheshopsaver"
@@ -117,6 +135,16 @@ CONFIRMED_TERMS = re.compile(
 DIRECT_TERMS = re.compile(r"\bnintendo\s+direct\b|\bdirect\s+de\s+nintendo\b", re.I)
 RELEASE_TERMS = re.compile(
     r"\b(?:release date|launch(?:es|ing)?|releases?|fecha de lanzamiento|se lanza|llega(?:rá)?|sale a la venta)\b",
+    re.I,
+)
+MAJOR_NEWS_TERMS = re.compile(
+    r"\b(?:nintendo\s+direct|new game|nuevo juego|announc|anunci|reveal|presenta|release date|"
+    r"fecha de lanzamiento|precio|price|launch|lanzamiento|sales|ventas|hardware|console|consola)\b",
+    re.I,
+)
+MINOR_NEWS_TERMS = re.compile(
+    r"\b(?:review|reseña|an[aá]lisis|preview|impresiones|patch|parche|hotfix|correcci[oó]n|"
+    r"soluciona|resuelve|problema de color|wallpaper|fondo de pantalla)\b",
     re.I,
 )
 MONTHS = {
@@ -474,6 +502,77 @@ def select_diverse_digest_rows(rows: Iterable[tuple], limit: int = 3) -> list:
     return selected
 
 
+def weekly_editorial_score(row: tuple) -> int:
+    """Rank a published story by impact, trust, corroboration and reader response."""
+    title, link, source, relevance, status, reliability, other_sources, hot, useful, low = row
+    corroborating_sources = len([item for item in (other_sources or "").split(", ") if item])
+    score = int(relevance or 0) * 10
+    score += max(0, int(reliability or 0) - 1) * 4
+    score += min(corroborating_sources, 3) * 3
+    score += int(hot or 0) * 3 + int(useful or 0) - int(low or 0) * 4
+    if status == "confirmado":
+        score += 8
+    elif status == "rumor":
+        score -= 10
+    if MAJOR_NEWS_TERMS.search(title or ""):
+        score += 8
+    if MINOR_NEWS_TERMS.search(title or ""):
+        score -= 8
+    return score
+
+
+def select_weekly_digest_rows(conn: sqlite3.Connection, now: datetime, limit: int = 5) -> list:
+    cutoff = int((now - timedelta(days=7)).timestamp())
+    rows = conn.execute(
+        "SELECT sent_articles.title, sent_articles.link, sent_articles.source, "
+        "sent_articles.relevance_score, sent_articles.status, sent_articles.reliability, "
+        "sent_articles.other_sources, "
+        "COALESCE(SUM(CASE article_feedback.rating WHEN 'hot' THEN 1 ELSE 0 END), 0), "
+        "COALESCE(SUM(CASE article_feedback.rating WHEN 'useful' THEN 1 ELSE 0 END), 0), "
+        "COALESCE(SUM(CASE article_feedback.rating WHEN 'low' THEN 1 ELSE 0 END), 0) "
+        "FROM sent_articles LEFT JOIN article_feedback "
+        "ON sent_articles.feedback_key = article_feedback.article_key "
+        "WHERE sent_articles.created_at >= ? AND sent_articles.link IS NOT NULL "
+        "AND sent_articles.link != '' GROUP BY sent_articles.id "
+        "ORDER BY sent_articles.created_at DESC",
+        (cutoff,),
+    ).fetchall()
+    ranked = sorted(rows, key=weekly_editorial_score, reverse=True)
+    return select_diverse_digest_rows(ranked, limit=limit)
+
+
+def weekly_story_icon(title: str, status: str) -> str:
+    if status == "rumor":
+        return "👀"
+    if DIRECT_TERMS.search(title or ""):
+        return "🎬"
+    if RELEASE_TERMS.search(title or ""):
+        return "📅"
+    if re.search(r"\b(?:update|actualizaci[oó]n|patch|parche)\b", title or "", re.I):
+        return "🛠"
+    if status == "confirmado":
+        return "✅"
+    return "🎮"
+
+
+def build_weekly_digest(rows: list) -> str:
+    heading = "La noticia clave de la semana" if len(rows) == 1 else f"Las {len(rows)} noticias clave de la semana"
+    parts = [f"🏆 <b>{heading}</b>", "", "Lo esencial de Nintendo Switch 2, sin ruido y en un solo mensaje.", ""]
+    number_icons = ("1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣")
+    for index, row in enumerate(rows):
+        title, link, source, relevance, status, reliability, other_sources, hot, useful, low = row
+        icon = weekly_story_icon(title, status)
+        label = "Confirmado" if status == "confirmado" else ("Rumor" if status == "rumor" else "Destacado")
+        parts.append(
+            f'{number_icons[index]} {icon} <b><a href="{html.escape(link, quote=True)}">'
+            f'{html.escape(title)}</a></b>\n   {label} · {html.escape(source)}'
+        )
+        if index < len(rows) - 1:
+            parts.append("")
+    parts.extend(["", "💬 <i>¿Cuál ha sido para ti la noticia de la semana?</i>"])
+    return "\n".join(parts)[:4096]
+
+
 def smart_deduplicate_stories(stories: Iterable[Story]) -> List[Story]:
     unique: List[Story] = []
     for story in stories:
@@ -733,10 +832,6 @@ def send_telegram_story(token: str, chat_id: str, story: Story) -> bool:
         keyboard = {"inline_keyboard": [[
             {"text": "📰 Leer noticia", "url": story.link},
             {"text": "🔗 Compartir", "url": share_url},
-        ], [
-            {"text": "🔥 Interesante", "callback_data": f"rate:hot:{feedback_key(story)}"},
-            {"text": "👍 Útil", "callback_data": f"rate:useful:{feedback_key(story)}"},
-            {"text": "👎 Poco relevante", "callback_data": f"rate:low:{feedback_key(story)}"},
         ]]}
         common["reply_markup"] = json.dumps(keyboard)
     if story.image_url:
@@ -865,6 +960,10 @@ def daily_promo_text(now: datetime) -> str:
     return PROMO_MESSAGES[now.toordinal() % len(PROMO_MESSAGES)]
 
 
+def channel_share_text(now: datetime) -> str:
+    return CHANNEL_SHARE_MESSAGES[now.toordinal() % len(CHANNEL_SHARE_MESSAGES)]
+
+
 def get_channel_share_url() -> str:
     configured_url = TELEGRAM_CHANNEL_URL.strip()
     if configured_url:
@@ -896,7 +995,7 @@ def send_daily_promo(conn: sqlite3.Connection, dry_run: bool = False) -> None:
     channel_url = get_channel_share_url()
     if channel_url:
         share_url = "https://t.me/share/url?url=" + quote(channel_url, safe="") + "&text=" + quote(
-            "Sigue las noticias de Nintendo Switch 2 en este canal.", safe=""
+            channel_share_text(now), safe=""
         )
         payload["reply_markup"] = json.dumps({"inline_keyboard": [[
             {"text": "📣 Compartir canal", "url": share_url},
@@ -1210,17 +1309,10 @@ def send_weekly_digest(conn: sqlite3.Connection, dry_run: bool = False) -> None:
     now = local_now()
     if not weekly_digest_is_due(conn, now):
         return
-    rows = conn.execute(
-        "SELECT title, link, source, relevance_score FROM sent_articles WHERE created_at >= ? "
-        "ORDER BY relevance_score DESC, created_at DESC LIMIT 5",
-        (int(time.time()) - 7 * 86400,),
-    ).fetchall()
+    rows = select_weekly_digest_rows(conn, now)
     if not rows:
         return
-    parts = ["📊 <b>Lo más importante de la semana en Switch 2</b>", ""]
-    for index, (title, link, source, score) in enumerate(rows, 1):
-        parts.append(f'{index}. <a href="{html.escape(link, quote=True)}">{html.escape(title)}</a> · {html.escape(source)}')
-    message = "\n".join(parts)
+    message = build_weekly_digest(rows)
     if dry_run:
         logger.info("Dry-run del resumen semanal:\n%s", message)
         return
@@ -1277,9 +1369,6 @@ def build_admin_weekly_stats(conn: sqlite3.Connection, now: datetime, member_cou
         "ORDER BY COUNT(*) DESC, source LIMIT 3",
         (cutoff,),
     ).fetchall()
-    feedback = dict(conn.execute(
-        "SELECT rating, COUNT(*) FROM article_feedback WHERE created_at >= ? GROUP BY rating", (cutoff,)
-    ).fetchall())
     top_story = conn.execute(
         "SELECT title, source, relevance_score FROM sent_articles WHERE created_at >= ? "
         "ORDER BY relevance_score DESC, created_at DESC LIMIT 1",
@@ -1305,7 +1394,6 @@ def build_admin_weekly_stats(conn: sqlite3.Connection, now: datetime, member_cou
         f"🟢 Confirmadas: {confirmed or 0} · 🟡 Rumores: {rumors or 0}",
         f"⭐ Relevancia media: {float(average):.1f}/10",
         f"🇬🇧 Noticias inglesas: {english or 0} · Traducción ✅ {complete or 0} / ◐ {partial or 0} / ❌ {failed or 0}",
-        f"💬 Valoraciones: 🔥 {feedback.get('hot', 0)} · 👍 {feedback.get('useful', 0)} · 👎 {feedback.get('low', 0)}",
         f"🗓 Próximos lanzamientos registrados: {upcoming}",
         f"📡 Feeds operativos: {healthy_feeds}/{len(RSS_FEEDS)}",
     ])
