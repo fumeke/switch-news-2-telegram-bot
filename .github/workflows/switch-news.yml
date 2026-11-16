@@ -16,6 +16,8 @@ on:
 
 permissions:
   contents: read
+  pages: write
+  id-token: write
 
 concurrency:
   group: switch-news-publish
@@ -52,6 +54,7 @@ jobs:
           DATABASE_PATH: seen.db
           CHANNEL_TIMEZONE: Europe/Madrid
           ADMIN_STATS_HOUR: '21'
+          NEWS_FEED_PATH: _site/latest-news.json
           DRY_RUN: ${{ inputs.dry_run && 'true' || 'false' }}
         run: |
           if [ "$DRY_RUN" = "true" ]; then
@@ -65,3 +68,27 @@ jobs:
         with:
           path: seen.db
           key: seen-db-${{ github.run_id }}-${{ github.run_attempt }}
+      - name: Preparar feed para GitHub Pages
+        if: ${{ !inputs.dry_run && hashFiles('_site/latest-news.json') != '' }}
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+
+  deploy-feed:
+    if: ${{ !inputs.dry_run }}
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Configurar GitHub Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - name: Publicar feed de noticias
+        id: deployment
+        uses: actions/deploy-pages@v4

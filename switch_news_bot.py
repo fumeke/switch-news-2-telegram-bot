@@ -44,6 +44,7 @@ CALENDAR_DAYS_AHEAD = int(environ.get("CALENDAR_DAYS_AHEAD", "60"))
 CALENDAR_AVAILABLE_DAYS = int(environ.get("CALENDAR_AVAILABLE_DAYS", "30"))
 CALENDAR_REMINDER_HOUR = int(environ.get("CALENDAR_REMINDER_HOUR", "10"))
 ADMIN_STATS_HOUR = int(environ.get("ADMIN_STATS_HOUR", "22"))
+NEWS_FEED_PATH = environ.get("NEWS_FEED_PATH", "")
 CUSTOM_PROMO_TEXT = environ.get("PROMO_TEXT", "")
 PROMO_MESSAGES = (
     "🎮 <b>Las buenas noticias saben mejor cuando se comparten.</b>\n\n"
@@ -1430,6 +1431,46 @@ def send_admin_weekly_stats(conn: sqlite3.Connection, dry_run: bool = False) -> 
             set_state(conn, "last_subscriber_count", str(member_count))
 
 
+def export_latest_news_feed(conn: sqlite3.Connection, output_path: str, now: datetime = None) -> dict:
+    """Write the latest distinct channel stories as a small public app feed."""
+    now = now or local_now()
+    cutoff = int((now - timedelta(days=7)).timestamp())
+    candidates = conn.execute(
+        "SELECT title, link, source, relevance_score, status, created_at FROM sent_articles "
+        "WHERE created_at >= ? AND link IS NOT NULL AND link != '' "
+        "ORDER BY created_at DESC LIMIT 30",
+        (cutoff,),
+    ).fetchall()
+    rows = select_diverse_digest_rows(candidates, limit=3)
+    labels = {"confirmado": "Confirmado", "rumor": "Rumor", "noticia": "Noticia"}
+    payload = {
+        "updatedAt": now.astimezone(timezone.utc).isoformat().replace("+00:00", "Z"),
+        "channelUrl": "https://t.me/switch2noticias",
+        "news": [
+            {
+                "title": title,
+                "url": link,
+                "source": source,
+                "category": labels.get(status or "noticia", "Noticia"),
+                "publishedAt": datetime.fromtimestamp(created_at, timezone.utc).isoformat().replace("+00:00", "Z"),
+            }
+            for title, link, source, relevance, status, created_at in rows
+        ],
+    }
+    destination = Path(output_path)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    logger.info("Feed público actualizado con %d noticias en %s", len(rows), destination)
+    return payload
+
+
+def finish_run(conn: sqlite3.Connection, dry_run: bool = False) -> int:
+    if NEWS_FEED_PATH and not dry_run:
+        export_latest_news_feed(conn, NEWS_FEED_PATH)
+    conn.close()
+    return 0
+
+
 def run(dry_run: bool = False) -> int:
     if not dry_run and (not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID):
         logger.error("Falta TELEGRAM_BOT_TOKEN o TELEGRAM_CHAT_ID en el entorno.")
@@ -1447,12 +1488,10 @@ def run(dry_run: bool = False) -> int:
             "No se publican noticias antes del resumen matinal de las %02d:00.",
             MORNING_DIGEST_HOUR,
         )
-        conn.close()
-        return 0
+        return finish_run(conn, dry_run=dry_run)
     if morning_digest_is_due(conn, now):
         send_morning_digest(conn, dry_run=dry_run)
-        conn.close()
-        return 0
+        return finish_run(conn, dry_run=dry_run)
 
     all_stories: List[Story] = []
     for config in RSS_FEEDS:
@@ -1512,8 +1551,7 @@ def run(dry_run: bool = False) -> int:
     send_calendar_reminder(conn, dry_run=dry_run)
     sync_release_calendar(conn, dry_run=dry_run)
     send_admin_weekly_stats(conn, dry_run=dry_run)
-    conn.close()
-    return 0
+    return finish_run(conn, dry_run=dry_run)
 
 
 if __name__ == "__main__":

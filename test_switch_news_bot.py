@@ -310,6 +310,34 @@ def test_weekly_digest_format_is_attractive_and_escapes_html():
     assert "Confirmado · Fuente &amp; Co" in message
 
 
+def test_public_news_feed_contains_three_recent_distinct_stories(tmp_path):
+    conn = bot.create_database(str(tmp_path / "feed.db"))
+    now = datetime(2026, 11, 16, 9, 0, tzinfo=ZoneInfo("Europe/Madrid"))
+    stories = [
+        ("zelda-1", "Nintendo anuncia un nuevo Zelda para Switch 2", "confirmado"),
+        ("zelda-2", "Nuevo Zelda anunciado oficialmente para Nintendo Switch 2", "confirmado"),
+        ("metroid", "Metroid Prime 4 confirma su fecha de lanzamiento", "confirmado"),
+        ("mario", "Mario Kart recibe nuevos circuitos en Switch 2", "noticia"),
+    ]
+    for offset, (story_id, title, status) in enumerate(stories):
+        conn.execute(
+            "INSERT INTO sent_articles (id, title, link, source, created_at, relevance_score, status) "
+            "VALUES (?, ?, ?, 'Fuente', ?, 9, ?)",
+            (story_id, title, f"https://example.com/{story_id}", int(now.timestamp()) - offset, status),
+        )
+    conn.commit()
+    output = tmp_path / "site" / "latest-news.json"
+
+    payload = bot.export_latest_news_feed(conn, str(output), now=now)
+    stored = json.loads(output.read_text(encoding="utf-8"))
+
+    assert stored == payload
+    assert stored["channelUrl"] == "https://t.me/switch2noticias"
+    assert len(stored["news"]) == 3
+    assert sum("Zelda" in item["title"] for item in stored["news"]) == 1
+    assert stored["news"][0]["publishedAt"].endswith("Z")
+
+
 def test_reader_feedback_adjusts_source_score(tmp_path):
     conn = bot.create_database(str(tmp_path / "feedback.db"))
     published = story("Nintendo Switch 2 recibe novedades")

@@ -32,6 +32,7 @@ Agregador de noticias para Telegram con fuentes españolas e internacionales, tr
 - Calendario fijado con lanzamientos confirmados de los próximos 60 días.
 - Informe privado dominical con las estadísticas principales del canal.
 - Pruebas automáticas en cada push y pull request de GitHub.
+- Feed JSON público con las tres últimas noticias para Switch eShop Saver.
 
 Las etiquetas son una clasificación heurística: `Confirmado` indica que el texto contiene señales explícitas de confirmación oficial; no sustituye una comprobación editorial.
 
@@ -64,6 +65,7 @@ CALENDAR_DAYS_AHEAD=60
 CALENDAR_AVAILABLE_DAYS=30
 CALENDAR_REMINDER_HOUR=10
 ADMIN_STATS_HOUR=22
+NEWS_FEED_PATH=_site/latest-news.json
 ```
 
 `TRANSLATION_ENABLED=false` conserva el texto original. Si el servicio de traducción no está disponible, el bot publica el original y continúa procesando el resto.
@@ -99,6 +101,16 @@ python3 switch_news_bot.py
 ```
 
 El modo `--dry-run` no necesita credenciales, no envía publicaciones y tampoco marca artículos como vistos.
+
+## Feed para Switch eShop Saver
+
+Después de cada ejecución real, GitHub Actions genera y publica `latest-news.json` mediante GitHub Pages. El feed contiene las tres noticias más recientes sobre temas diferentes, su fuente, categoría, fecha y enlace original. La aplicación puede consultarlo en:
+
+```text
+https://fumeke.github.io/switch-news-2-telegram-bot/latest-news.json
+```
+
+`NEWS_FEED_PATH` controla dónde se genera el archivo. No se modifica durante ejecuciones con `--dry-run`.
 
 ## Fuentes e idiomas
 
