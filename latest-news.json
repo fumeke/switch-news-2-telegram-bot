@@ -1,27 +1,27 @@
 {
-  "updatedAt": "2026-11-16T19:31:12.917406Z",
+  "updatedAt": "2026-11-16T20:01:14.162687Z",
   "channelUrl": "https://t.me/switch2noticias",
   "news": [
+    {
+      "title": "El desarrollo de Indiana Jones y el Gran Círculo fue todo un desafío para MachineGames: 'Fue muy difícil'",
+      "url": "https://vandal.elespanol.com/noticia/2026320027/el-desarrollo-de-indiana-jones-y-el-gran-circulo-fue-todo-un-desafio-para-machinegames-fue-muy-dificil/",
+      "source": "Vandal",
+      "category": "Noticia",
+      "publishedAt": "2026-11-16T20:01:12Z"
+    },
+    {
+      "title": "Rumor: Atlus podría estar preparándose para una gran revelación de Persona 6",
+      "url": "https://www.nintendolife.com/news/2026/11/rumour-atlus-may-be-gearing-up-for-a-huge-persona-6-reveal",
+      "source": "Nintendo Life",
+      "category": "Rumor",
+      "publishedAt": "2026-11-16T20:01:10Z"
+    },
     {
       "title": "Mega Man: Dual Override mantendrá la tradición y presenta un nuevo jefe diseñado por un fan",
       "url": "https://vandal.elespanol.com/noticia/2026320009/mega-man-dual-override-mantendra-la-tradicion-y-presenta-un-nuevo-jefe-disenado-por-un-fan/",
       "source": "Vandal",
       "category": "Confirmado",
       "publishedAt": "2026-11-16T19:31:11Z"
-    },
-    {
-      "title": "Última oportunidad: el ofertón de Final Fantasy VII Remake y Rebirth para Switch 2 termina hoy",
-      "url": "https://vandal.elespanol.com/noticia/2026320014/ltima-oportunidad-el-oferton-de-final-fantasy-vii-remake-y-rebirth-para-switch-2-termina-hoy/",
-      "source": "Vandal",
-      "category": "Noticia",
-      "publishedAt": "2026-11-16T19:31:10Z"
-    },
-    {
-      "title": "Detienen al sospechoso de iniciar un tiroteo cerca de las oficinas de inXile, el estudio de Microsoft",
-      "url": "https://vandal.elespanol.com/noticia/2026320015/detienen-al-sospechoso-de-iniciar-un-tiroteo-cerca-de-las-oficinas-de-inxile-el-estudio-de-microsoft/",
-      "source": "Vandal",
-      "category": "Noticia",
-      "publishedAt": "2026-11-16T19:31:08Z"
     }
   ]
 }
