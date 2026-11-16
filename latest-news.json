@@ -1,27 +1,27 @@
 {
-  "updatedAt": "2026-11-16T11:01:30.769105Z",
+  "updatedAt": "2026-11-16T14:01:10.277969Z",
   "channelUrl": "https://t.me/switch2noticias",
   "news": [
+    {
+      "title": "Ya disponible este nuevo pack de Nintendo Switch 2 + Zelda: Ocarina of Time + Trifuerza ornamental en la Nintendo Store europea",
+      "url": "https://www.nintenderos.com/nintendo-switch-2/ya-disponible-este-nuevo-pack-de-nintendo-switch-2-zelda-ocarina-of-time-trifuerza-ornamental-en-la-nintendo-store-europea/",
+      "source": "Nintenderos",
+      "category": "Confirmado",
+      "publishedAt": "2026-11-16T14:01:09Z"
+    },
+    {
+      "title": "Shinji Mikami destaca la influencia de Zelda: A Link to the Past y revela cómo Sony salvó el lanzamiento del primer Resident Evil",
+      "url": "https://www.nintenderos.com/2026/11/shinji-mikami-destaca-la-influencia-de-zelda-a-link-to-the-past-y-revela-como-sony-salvo-el-lanzamiento-del-primer-resident-evil/",
+      "source": "Nintenderos",
+      "category": "Noticia",
+      "publishedAt": "2026-11-16T14:01:07Z"
+    },
     {
       "title": "Estos juegos están rebajados en las eShop de Nintendo Switch 2 / Nintendo Switch y arrasan actualmente: I am Setsuna, L.A. Noire y más (16/11/26)",
       "url": "https://www.nintenderos.com/nintendo-switch-2/estos-juegos-estan-rebajados-en-las-eshop-de-nintendo-switch-2-nintendo-switch-y-arrasan-actualmente-i-am-setsuna-l-a-noire-y-mas/",
       "source": "Nintenderos",
       "category": "Noticia",
       "publishedAt": "2026-11-16T11:01:29Z"
-    },
-    {
-      "title": "Análisis Fire Emblem: Fortune’s Weave – Nintendo Switch 2. ¡Los Juegos Heroicos acaban de comenzar!",
-      "url": "https://www.nextn.es/2026/11/analisis-fire-emblem-fortunes-weave-nintendo-switch-2/",
-      "source": "NextN",
-      "category": "Noticia",
-      "publishedAt": "2026-11-16T11:01:27Z"
-    },
-    {
-      "title": "Onimusha: Way of the Sword sigue sorprendiendo en Nintendo Switch 2",
-      "url": "https://www.nintenderos.com/nintendo-switch-2/onimusha-way-of-the-sword-sigue-sorprendiendo-en-nintendo-switch-2/",
-      "source": "Nintenderos",
-      "category": "Noticia",
-      "publishedAt": "2026-11-16T11:01:25Z"
     }
   ]
 }
