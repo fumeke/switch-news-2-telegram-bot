@@ -1,27 +1,27 @@
 {
-  "updatedAt": "2026-11-16T17:01:15.927994Z",
+  "updatedAt": "2026-11-16T19:31:12.917406Z",
   "channelUrl": "https://t.me/switch2noticias",
   "news": [
     {
-      "title": "Revisión: Mobapad M12 Pro Joy-Con para Switch 2: la mejor opción para dispositivos portátiles",
-      "url": "https://www.nintendolife.com/reviews/mobapad-m12-pro-joy-con-for-switch-2-the-best-option-for-handheld",
-      "source": "Nintendo Life",
+      "title": "Mega Man: Dual Override mantendrá la tradición y presenta un nuevo jefe diseñado por un fan",
+      "url": "https://vandal.elespanol.com/noticia/2026320009/mega-man-dual-override-mantendra-la-tradicion-y-presenta-un-nuevo-jefe-disenado-por-un-fan/",
+      "source": "Vandal",
       "category": "Confirmado",
-      "publishedAt": "2026-11-16T17:01:14Z"
+      "publishedAt": "2026-11-16T19:31:11Z"
     },
     {
-      "title": "Ya disponible este nuevo pack de Nintendo Switch 2 + Zelda: Ocarina of Time + Trifuerza ornamental en la Nintendo Store europea",
-      "url": "https://www.nintenderos.com/nintendo-switch-2/ya-disponible-este-nuevo-pack-de-nintendo-switch-2-zelda-ocarina-of-time-trifuerza-ornamental-en-la-nintendo-store-europea/",
-      "source": "Nintenderos",
-      "category": "Confirmado",
-      "publishedAt": "2026-11-16T14:01:09Z"
-    },
-    {
-      "title": "Shinji Mikami destaca la influencia de Zelda: A Link to the Past y revela cómo Sony salvó el lanzamiento del primer Resident Evil",
-      "url": "https://www.nintenderos.com/2026/11/shinji-mikami-destaca-la-influencia-de-zelda-a-link-to-the-past-y-revela-como-sony-salvo-el-lanzamiento-del-primer-resident-evil/",
-      "source": "Nintenderos",
+      "title": "Última oportunidad: el ofertón de Final Fantasy VII Remake y Rebirth para Switch 2 termina hoy",
+      "url": "https://vandal.elespanol.com/noticia/2026320014/ltima-oportunidad-el-oferton-de-final-fantasy-vii-remake-y-rebirth-para-switch-2-termina-hoy/",
+      "source": "Vandal",
       "category": "Noticia",
-      "publishedAt": "2026-11-16T14:01:07Z"
+      "publishedAt": "2026-11-16T19:31:10Z"
+    },
+    {
+      "title": "Detienen al sospechoso de iniciar un tiroteo cerca de las oficinas de inXile, el estudio de Microsoft",
+      "url": "https://vandal.elespanol.com/noticia/2026320015/detienen-al-sospechoso-de-iniciar-un-tiroteo-cerca-de-las-oficinas-de-inxile-el-estudio-de-microsoft/",
+      "source": "Vandal",
+      "category": "Noticia",
+      "publishedAt": "2026-11-16T19:31:08Z"
     }
   ]
 }
