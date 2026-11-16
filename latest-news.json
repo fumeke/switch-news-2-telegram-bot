@@ -1,7 +1,14 @@
 {
-  "updatedAt": "2026-11-16T14:01:10.277969Z",
+  "updatedAt": "2026-11-16T17:01:15.927994Z",
   "channelUrl": "https://t.me/switch2noticias",
   "news": [
+    {
+      "title": "Revisión: Mobapad M12 Pro Joy-Con para Switch 2: la mejor opción para dispositivos portátiles",
+      "url": "https://www.nintendolife.com/reviews/mobapad-m12-pro-joy-con-for-switch-2-the-best-option-for-handheld",
+      "source": "Nintendo Life",
+      "category": "Confirmado",
+      "publishedAt": "2026-11-16T17:01:14Z"
+    },
     {
       "title": "Ya disponible este nuevo pack de Nintendo Switch 2 + Zelda: Ocarina of Time + Trifuerza ornamental en la Nintendo Store europea",
       "url": "https://www.nintenderos.com/nintendo-switch-2/ya-disponible-este-nuevo-pack-de-nintendo-switch-2-zelda-ocarina-of-time-trifuerza-ornamental-en-la-nintendo-store-europea/",
@@ -15,13 +22,6 @@
       "source": "Nintenderos",
       "category": "Noticia",
       "publishedAt": "2026-11-16T14:01:07Z"
-    },
-    {
-      "title": "Estos juegos están rebajados en las eShop de Nintendo Switch 2 / Nintendo Switch y arrasan actualmente: I am Setsuna, L.A. Noire y más (16/11/26)",
-      "url": "https://www.nintenderos.com/nintendo-switch-2/estos-juegos-estan-rebajados-en-las-eshop-de-nintendo-switch-2-nintendo-switch-y-arrasan-actualmente-i-am-setsuna-l-a-noire-y-mas/",
-      "source": "Nintenderos",
-      "category": "Noticia",
-      "publishedAt": "2026-11-16T11:01:29Z"
     }
   ]
 }
