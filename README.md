@@ -104,10 +104,10 @@ El modo `--dry-run` no necesita credenciales, no envía publicaciones y tampoco 
 
 ## Feed para Switch eShop Saver
 
-Después de cada ejecución real, GitHub Actions genera y publica `latest-news.json` mediante GitHub Pages. El feed contiene las tres noticias más recientes sobre temas diferentes, su fuente, categoría, fecha y enlace original. La aplicación puede consultarlo en:
+Después de cada ejecución real, GitHub Actions genera `latest-news.json` y lo publica en la rama técnica `gh-pages`. El feed contiene las tres noticias más recientes sobre temas diferentes, su fuente, categoría, fecha y enlace original. La aplicación puede consultarlo en:
 
 ```text
-https://fumeke.github.io/switch-news-2-telegram-bot/latest-news.json
+https://raw.githubusercontent.com/fumeke/switch-news-2-telegram-bot/gh-pages/latest-news.json
 ```
 
 `NEWS_FEED_PATH` controla dónde se genera el archivo. No se modifica durante ejecuciones con `--dry-run`.
