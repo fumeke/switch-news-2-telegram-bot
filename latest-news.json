@@ -1,27 +1,27 @@
 {
-  "updatedAt": "2026-11-17T11:01:42.714204Z",
+  "updatedAt": "2026-11-17T14:01:37.561931Z",
   "channelUrl": "https://t.me/switch2noticias",
   "news": [
     {
-      "title": "Anuncio de servicio público: La demostración de Splatoon Raiders llega hoy a la tienda electrónica Switch 2",
-      "url": "https://www.nintendolife.com/news/2026/11/psa-splatoon-raiders-demo-splashes-onto-the-switch-2-eshop-today",
+      "title": "GTA 6 llega a NBA 2K27: el deseado juego de Rockstar protagonizará la Temporada 3 en su primera gran colaboración",
+      "url": "https://vandal.elespanol.com/noticia/2026320030/gta-6-llega-a-nba-2k27-el-deseado-juego-de-rockstar-protagonizara-la-temporada-3-en-su-primera-gran-colaboracion/",
+      "source": "Vandal",
+      "category": "Confirmado",
+      "publishedAt": "2026-11-17T14:01:36Z"
+    },
+    {
+      "title": "Nintendo Switch 2 se confirma como la consola (que no la plataforma) más interesante para los desarrolladores",
+      "url": "https://www.nextn.es/2026/11/nintendo-switch-2-consola-mas-querida-desarrolladores/",
+      "source": "NextN",
+      "category": "Noticia",
+      "publishedAt": "2026-11-17T14:01:34Z"
+    },
+    {
+      "title": "Zelda: Ocarina Of Time Remake coronado como el \"videojuego físico más vendido en EE. UU.\" en 2026",
+      "url": "https://www.nintendolife.com/news/2026/11/zelda-ocarina-of-time-remake-crowned-2026s-best-selling-physical-video-game-in-the-us",
       "source": "Nintendo Life",
       "category": "Noticia",
-      "publishedAt": "2026-11-17T11:01:41Z"
-    },
-    {
-      "title": "Zelda: Ocarina of Time Remake se convierte en el juego físico más vendido de 2026 en Estados Unidos en solo una semana",
-      "url": "https://www.nintenderos.com/nintendo-switch-2/zelda-ocarina-of-time-remake-se-convierte-en-el-juego-fisico-mas-vendido-de-2026-en-estados-unidos-en-solo-una-semana/",
-      "source": "Nintenderos",
-      "category": "Noticia",
-      "publishedAt": "2026-11-17T11:01:40Z"
-    },
-    {
-      "title": "Splatoon 3 se actualiza a la versión 12.0.0 con estas novedades",
-      "url": "https://www.nintenderos.com/nintendo-switch-2/splatoon-3-se-actualiza-a-la-version-12-0-0-con-estas-novedades/",
-      "source": "Nintenderos",
-      "category": "Noticia",
-      "publishedAt": "2026-11-17T11:01:38Z"
+      "publishedAt": "2026-11-17T14:01:33Z"
     }
   ]
 }
