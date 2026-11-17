@@ -1,27 +1,27 @@
 {
-  "updatedAt": "2026-11-17T08:01:16.229457Z",
+  "updatedAt": "2026-11-17T11:01:42.714204Z",
   "channelUrl": "https://t.me/switch2noticias",
   "news": [
     {
-      "title": "El desarrollo de Indiana Jones y el Gran Círculo fue todo un desafío para MachineGames: 'Fue muy difícil'",
-      "url": "https://vandal.elespanol.com/noticia/2026320027/el-desarrollo-de-indiana-jones-y-el-gran-circulo-fue-todo-un-desafio-para-machinegames-fue-muy-dificil/",
-      "source": "Vandal",
-      "category": "Noticia",
-      "publishedAt": "2026-11-16T20:01:12Z"
-    },
-    {
-      "title": "Rumor: Atlus podría estar preparándose para una gran revelación de Persona 6",
-      "url": "https://www.nintendolife.com/news/2026/11/rumour-atlus-may-be-gearing-up-for-a-huge-persona-6-reveal",
+      "title": "Anuncio de servicio público: La demostración de Splatoon Raiders llega hoy a la tienda electrónica Switch 2",
+      "url": "https://www.nintendolife.com/news/2026/11/psa-splatoon-raiders-demo-splashes-onto-the-switch-2-eshop-today",
       "source": "Nintendo Life",
-      "category": "Rumor",
-      "publishedAt": "2026-11-16T20:01:10Z"
+      "category": "Noticia",
+      "publishedAt": "2026-11-17T11:01:41Z"
     },
     {
-      "title": "Mega Man: Dual Override mantendrá la tradición y presenta un nuevo jefe diseñado por un fan",
-      "url": "https://vandal.elespanol.com/noticia/2026320009/mega-man-dual-override-mantendra-la-tradicion-y-presenta-un-nuevo-jefe-disenado-por-un-fan/",
-      "source": "Vandal",
-      "category": "Confirmado",
-      "publishedAt": "2026-11-16T19:31:11Z"
+      "title": "Zelda: Ocarina of Time Remake se convierte en el juego físico más vendido de 2026 en Estados Unidos en solo una semana",
+      "url": "https://www.nintenderos.com/nintendo-switch-2/zelda-ocarina-of-time-remake-se-convierte-en-el-juego-fisico-mas-vendido-de-2026-en-estados-unidos-en-solo-una-semana/",
+      "source": "Nintenderos",
+      "category": "Noticia",
+      "publishedAt": "2026-11-17T11:01:40Z"
+    },
+    {
+      "title": "Splatoon 3 se actualiza a la versión 12.0.0 con estas novedades",
+      "url": "https://www.nintenderos.com/nintendo-switch-2/splatoon-3-se-actualiza-a-la-version-12-0-0-con-estas-novedades/",
+      "source": "Nintenderos",
+      "category": "Noticia",
+      "publishedAt": "2026-11-17T11:01:38Z"
     }
   ]
 }
