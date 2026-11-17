@@ -1,7 +1,14 @@
 {
-  "updatedAt": "2026-11-17T19:31:28.937318Z",
+  "updatedAt": "2026-11-17T20:01:13.261042Z",
   "channelUrl": "https://t.me/switch2noticias",
   "news": [
+    {
+      "title": "Splatoon Raiders estrena demo en Nintendo Switch 2 para probar sus incursiones y combates",
+      "url": "https://www.nextn.es/2026/11/splatoon-raiders-estrena-demo/",
+      "source": "NextN",
+      "category": "Noticia",
+      "publishedAt": "2026-11-17T20:01:11Z"
+    },
     {
       "title": "Splatoon 3 se actualiza a su versión 12.0.0 con importantes cambios y ajustes de equilibrio",
       "url": "https://vandal.elespanol.com/noticia/2026321022/splatoon-3-se-actualiza-a-su-version-1200-con-importantes-cambios-y-ajustes-de-equilibrio/",
@@ -15,13 +22,6 @@
       "source": "Vandal",
       "category": "Confirmado",
       "publishedAt": "2026-11-17T19:31:26Z"
-    },
-    {
-      "title": "Anunciada la edición física Sea of Stars: Sunset Edition para Nintendo Switch 2",
-      "url": "https://www.nintenderos.com/nintendo-switch-2/anunciada-la-edicion-fisica-sea-of-stars-sunset-edition-para-nintendo-switch-2/",
-      "source": "Nintenderos",
-      "category": "Confirmado",
-      "publishedAt": "2026-11-17T19:31:24Z"
     }
   ]
 }
