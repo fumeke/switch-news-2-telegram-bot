@@ -1,27 +1,27 @@
 {
-  "updatedAt": "2026-11-17T14:01:37.561931Z",
+  "updatedAt": "2026-11-17T17:01:33.314149Z",
   "channelUrl": "https://t.me/switch2noticias",
   "news": [
     {
-      "title": "GTA 6 llega a NBA 2K27: el deseado juego de Rockstar protagonizará la Temporada 3 en su primera gran colaboración",
-      "url": "https://vandal.elespanol.com/noticia/2026320030/gta-6-llega-a-nba-2k27-el-deseado-juego-de-rockstar-protagonizara-la-temporada-3-en-su-primera-gran-colaboracion/",
-      "source": "Vandal",
+      "title": "The Legend of Zelda: Ocarina of Time en Switch 2 es el juego físico más vendido en EE. UU. en lo que va de año",
+      "url": "https://www.eurogamer.net/the-legend-of-zelda-ocarina-of-time-remake-physical-sales-us-1-million",
+      "source": "Eurogamer",
+      "category": "Noticia",
+      "publishedAt": "2026-11-17T17:01:32Z"
+    },
+    {
+      "title": "Anunciada la Nintendo Switch 2 Holiday Experience 2026 en Estados Unidos",
+      "url": "https://www.nintenderos.com/nintendo-switch-2/anunciada-la-nintendo-switch-2-holiday-experience-2026-en-estados-unidos/",
+      "source": "Nintenderos",
       "category": "Confirmado",
-      "publishedAt": "2026-11-17T14:01:36Z"
+      "publishedAt": "2026-11-17T17:01:30Z"
     },
     {
-      "title": "Nintendo Switch 2 se confirma como la consola (que no la plataforma) más interesante para los desarrolladores",
-      "url": "https://www.nextn.es/2026/11/nintendo-switch-2-consola-mas-querida-desarrolladores/",
-      "source": "NextN",
-      "category": "Noticia",
-      "publishedAt": "2026-11-17T14:01:34Z"
-    },
-    {
-      "title": "Zelda: Ocarina Of Time Remake coronado como el \"videojuego físico más vendido en EE. UU.\" en 2026",
-      "url": "https://www.nintendolife.com/news/2026/11/zelda-ocarina-of-time-remake-crowned-2026s-best-selling-physical-video-game-in-the-us",
-      "source": "Nintendo Life",
-      "category": "Noticia",
-      "publishedAt": "2026-11-17T14:01:33Z"
+      "title": "Ya disponibles las Ofertas Black Friday de Nintendo Switch 2 y Nintendo Switch a través de la eShop europea",
+      "url": "https://www.nintenderos.com/nintendo-switch-2/ya-disponibles-las-ofertas-black-friday-de-nintendo-switch-2-y-nintendo-switch-a-traves-de-la-eshop-europea/",
+      "source": "Nintenderos",
+      "category": "Confirmado",
+      "publishedAt": "2026-11-17T17:01:28Z"
     }
   ]
 }
