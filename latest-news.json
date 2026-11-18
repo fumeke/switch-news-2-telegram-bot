@@ -1,27 +1,27 @@
 {
-  "updatedAt": "2026-11-18T08:00:58.615033Z",
+  "updatedAt": "2026-11-18T11:01:50.336122Z",
   "channelUrl": "https://t.me/switch2noticias",
   "news": [
     {
-      "title": "Splatoon Raiders estrena demo en Nintendo Switch 2 para probar sus incursiones y combates",
-      "url": "https://www.nextn.es/2026/11/splatoon-raiders-estrena-demo/",
-      "source": "NextN",
+      "title": "Los desarrolladores prefieren Switch 2 a PS6 o XBOX Helix, según una encuesta a 2600 profesionales",
+      "url": "https://vandal.elespanol.com/noticia/2026321031/los-desarrolladores-prefieren-switch-2-a-ps6-o-xbox-helix-segun-una-cuesta-a-2600-profesionales/",
+      "source": "Vandal",
       "category": "Noticia",
-      "publishedAt": "2026-11-17T20:01:11Z"
+      "publishedAt": "2026-11-18T11:01:48Z"
     },
     {
-      "title": "Splatoon 3 se actualiza a su versión 12.0.0 con importantes cambios y ajustes de equilibrio",
-      "url": "https://vandal.elespanol.com/noticia/2026321022/splatoon-3-se-actualiza-a-su-version-1200-con-importantes-cambios-y-ajustes-de-equilibrio/",
+      "title": "Pikmin 4 decepciona en Switch 2 y los jugadores comienzan una campaña de 'review bombing' en Metacritic",
+      "url": "https://vandal.elespanol.com/noticia/2026321032/pikmin-4-decepciona-en-switch-2-y-los-jugadores-comienzan-una-campana-de-review-bombing-en-metacritic/",
       "source": "Vandal",
-      "category": "Confirmado",
-      "publishedAt": "2026-11-17T19:31:27Z"
+      "category": "Noticia",
+      "publishedAt": "2026-11-18T11:01:46Z"
     },
     {
-      "title": "Square Enix quiere que vuelvas a Final Fantasy XIV y te regala un mes de suscripción",
-      "url": "https://vandal.elespanol.com/noticia/2026321025/square-enix-quiere-que-vuelvas-a-final-fantasy-xiv-y-te-regala-un-mes-de-suscripcion/",
+      "title": "Sea of Stars tendrá edición en formato físico para Nintendo Switch 2 con todo el contenido en la tarjeta de juego",
+      "url": "https://vandal.elespanol.com/noticia/2026321038/sea-of-stars-tendra-edicion-en-formato-fisico-para-nintendo-switch-2-con-todo-el-contenido-en-la-tarjeta-de-juego/",
       "source": "Vandal",
       "category": "Confirmado",
-      "publishedAt": "2026-11-17T19:31:26Z"
+      "publishedAt": "2026-11-18T11:01:44Z"
     }
   ]
 }
