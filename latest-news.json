@@ -1,27 +1,27 @@
 {
-  "updatedAt": "2026-11-18T17:01:37.579726Z",
+  "updatedAt": "2026-11-18T19:31:31.009260Z",
   "channelUrl": "https://t.me/switch2noticias",
   "news": [
     {
-      "title": "El nuevo Spyro the Dragon volverá a mostrarse en The Game Awards 2026 y ya deja ver una de sus zonas",
-      "url": "https://vandal.elespanol.com/noticia/2026322005/el-nuevo-spyro-the-dragon-volvera-a-mostrarse-en-the-game-awards-2026-y-ya-deja-ver-una-de-sus-zonas/",
-      "source": "Vandal",
-      "category": "Confirmado",
-      "publishedAt": "2026-11-18T17:01:36Z"
-    },
-    {
-      "title": "Nintendo anuncia sus descuentos del Black Friday en juegos de hasta el 75 %, packs de consola y mandos",
-      "url": "https://vandal.elespanol.com/noticia/2026322017/nintendo-anuncia-sus-descuentos-del-black-friday-en-juegos-de-hasta-el-75-packs-de-consola-y-mandos/",
-      "source": "Vandal",
-      "category": "Confirmado",
-      "publishedAt": "2026-11-18T17:01:32Z"
-    },
-    {
-      "title": "La actualización de Lego Batman: Legacy Of The Dark Knight agrega soporte para GameShare",
-      "url": "https://www.nintendolife.com/news/2026/11/lego-batman-legacy-of-the-dark-knight-update-adds-gameshare-support",
+      "title": "Guía: Lista de todas las canciones del Stage Tour: lista de canciones completa, todos los artistas confirmados",
+      "url": "https://www.nintendolife.com/guides/stage-tour-all-songs-list-full-tracklist-every-confirmed-artist",
       "source": "Nintendo Life",
-      "category": "Noticia",
-      "publishedAt": "2026-11-18T17:01:28Z"
+      "category": "Confirmado",
+      "publishedAt": "2026-11-18T19:31:28Z"
+    },
+    {
+      "title": "Rayman Legends Retold lanza nuevo tráiler de este mapa musical",
+      "url": "https://www.nintenderos.com/nintendo-switch-2/rayman-legends-retold-lanza-nuevo-trailer-de-este-mapa-musical/",
+      "source": "Nintenderos",
+      "category": "Confirmado",
+      "publishedAt": "2026-11-18T19:31:27Z"
+    },
+    {
+      "title": "8BitDo anuncia un nuevo mando inalámbrico de GameCube compatible con Nintendo Switch, Switch 2 y PC",
+      "url": "https://www.nintenderos.com/nintendo-switch-2/8bitdo-anuncia-un-nuevo-mando-inalambrico-de-gamecube-compatible-con-nintendo-switch-switch-2-y-pc/",
+      "source": "Nintenderos",
+      "category": "Confirmado",
+      "publishedAt": "2026-11-18T19:31:25Z"
     }
   ]
 }
