@@ -1,27 +1,27 @@
 {
-  "updatedAt": "2026-11-19T08:00:59.958172Z",
+  "updatedAt": "2026-11-19T11:01:22.119514Z",
   "channelUrl": "https://t.me/switch2noticias",
   "news": [
     {
-      "title": "Guía: Lista de todas las canciones del Stage Tour: lista de canciones completa, todos los artistas confirmados",
-      "url": "https://www.nintendolife.com/guides/stage-tour-all-songs-list-full-tracklist-every-confirmed-artist",
-      "source": "Nintendo Life",
-      "category": "Confirmado",
-      "publishedAt": "2026-11-18T19:31:28Z"
-    },
-    {
-      "title": "Rayman Legends Retold lanza nuevo tráiler de este mapa musical",
-      "url": "https://www.nintenderos.com/nintendo-switch-2/rayman-legends-retold-lanza-nuevo-trailer-de-este-mapa-musical/",
+      "title": "La banda sonora de Final Fantasy VII Revelation se lanzará en vinilo en Japón",
+      "url": "https://www.nintenderos.com/nintendo-switch-2/la-banda-sonora-de-final-fantasy-vii-revelation-se-lanzara-en-vinilo-en-japon/",
       "source": "Nintenderos",
       "category": "Confirmado",
-      "publishedAt": "2026-11-18T19:31:27Z"
+      "publishedAt": "2026-11-19T11:01:20Z"
     },
     {
-      "title": "8BitDo anuncia un nuevo mando inalámbrico de GameCube compatible con Nintendo Switch, Switch 2 y PC",
-      "url": "https://www.nintenderos.com/nintendo-switch-2/8bitdo-anuncia-un-nuevo-mando-inalambrico-de-gamecube-compatible-con-nintendo-switch-switch-2-y-pc/",
+      "title": "El guionista de South of Midnight responde a quienes lo critican por ser «un juego DEI»",
+      "url": "https://www.nintenderos.com/nintendo-switch-2/el-guionista-de-south-of-midnight-responde-a-quienes-lo-critican-por-ser-un-juego-dei/",
+      "source": "Nintenderos",
+      "category": "Noticia",
+      "publishedAt": "2026-11-19T11:01:19Z"
+    },
+    {
+      "title": "Mega Man: Dual Override presenta a Boat Man con este nuevo tráiler",
+      "url": "https://www.nintenderos.com/nintendo-switch-2/mega-man-dual-override-presenta-a-boat-man-con-este-nuevo-trailer/",
       "source": "Nintenderos",
       "category": "Confirmado",
-      "publishedAt": "2026-11-18T19:31:25Z"
+      "publishedAt": "2026-11-19T11:01:17Z"
     }
   ]
 }
