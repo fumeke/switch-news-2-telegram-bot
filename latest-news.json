@@ -1,27 +1,27 @@
 {
-  "updatedAt": "2026-11-20T17:01:13.270456Z",
+  "updatedAt": "2026-11-20T19:31:06.385882Z",
   "channelUrl": "https://t.me/switch2noticias",
   "news": [
+    {
+      "title": "Spike Chunsoft también lanza estos descuentos en la eShop de Nintendo Switch 2 y Nintendo Switch para América",
+      "url": "https://www.nintenderos.com/nintendo-switch-2/spike-chunsoft-tambien-lanza-estos-descuentos-en-la-eshop-de-nintendo-switch-2-y-nintendo-switch-para-america/",
+      "source": "Nintenderos",
+      "category": "Noticia",
+      "publishedAt": "2026-11-20T19:31:05Z"
+    },
+    {
+      "title": "Multiplicar el almacenamiento de tu Switch 2 cuesta menos de lo habitual ahora mismo",
+      "url": "https://www.theverge.com/gadgets/1037749/microsd-express-card-nintendo-switch-2-black-friday-2026-deal-sale",
+      "source": "The Verge",
+      "category": "Noticia",
+      "publishedAt": "2026-11-20T19:31:03Z"
+    },
     {
       "title": "Nintendo detalla los precios, el proceso de compra y más de las ocarinas reales de Zelda: Ocarina of Time",
       "url": "https://www.nintenderos.com/nintendo-switch-2/nintendo-detalla-los-precios-el-proceso-de-compra-y-mas-de-las-ocarinas-reales-de-zelda-ocarina-of-time/",
       "source": "Nintenderos",
       "category": "Confirmado",
       "publishedAt": "2026-11-20T17:01:12Z"
-    },
-    {
-      "title": "Nintendo Switch 2 cae a precio mínimo histórico en Amazon España con este descuento",
-      "url": "https://www.nintenderos.com/nintendo-switch-2/nintendo-switch-2-cae-a-precio-minimo-historico-en-amazon-espana-con-este-descuento/",
-      "source": "Nintenderos",
-      "category": "Noticia",
-      "publishedAt": "2026-11-20T17:01:10Z"
-    },
-    {
-      "title": "Nintendo Switch recibe nuevo juego gratis a través de la eShop americana: así es Geo Book",
-      "url": "https://www.nintenderos.com/2026/11/nintendo-switch-recibe-nuevo-juego-gratis-a-traves-de-la-eshop-americana-asi-es-geo-book/",
-      "source": "Nintenderos",
-      "category": "Noticia",
-      "publishedAt": "2026-11-20T17:01:09Z"
     }
   ]
 }
