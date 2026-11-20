@@ -1,27 +1,27 @@
 {
-  "updatedAt": "2026-11-20T11:01:33.950258Z",
+  "updatedAt": "2026-11-20T14:01:29.796852Z",
   "channelUrl": "https://t.me/switch2noticias",
   "news": [
+    {
+      "title": "La consola Zelda Switch 2 volverá a estar disponible pronto si te la perdiste (EE. UU.)",
+      "url": "https://www.nintendolife.com/news/2026/11/zelda-switch-2-console-is-back-in-stock-soon-if-you-missed-out-us",
+      "source": "Nintendo Life",
+      "category": "Confirmado",
+      "publishedAt": "2026-11-20T14:01:28Z"
+    },
+    {
+      "title": "Xenoblade Chronicles 3 ya ha recibido la actualización 3.0.0",
+      "url": "https://www.nintenderos.com/nintendo-switch-2/xenoblade-chronicles-3-ya-ha-recibido-la-actualizacion-3-0-0/",
+      "source": "Nintenderos",
+      "category": "Confirmado",
+      "publishedAt": "2026-11-20T14:01:27Z"
+    },
     {
       "title": "Call Of Duty: Modern Warfare 4 encabeza los juegos \"más vendidos\" en octubre (EE. UU.)",
       "url": "https://www.nintendolife.com/news/2026/11/call-of-duty-modern-warfare-4-tops-best-selling-games-in-october-us",
       "source": "Nintendo Life",
       "category": "Noticia",
       "publishedAt": "2026-11-20T11:01:32Z"
-    },
-    {
-      "title": "Xenoblade Chronicles 3 versión 3.0.0 ya está disponible, aquí están las notas del parche",
-      "url": "https://www.nintendolife.com/news/2026/11/xenoblade-chronicles-3-version-3-0-0-is-now-live-here-are-the-patch-notes",
-      "source": "Nintendo Life",
-      "category": "Confirmado",
-      "publishedAt": "2026-11-20T11:01:31Z"
-    },
-    {
-      "title": "Dynasty Warriors 3: Complete Edition Remastered obtiene una nueva actualización Switch 2",
-      "url": "https://www.nintendolife.com/news/2026/11/dynasty-warriors-3-complete-edition-remastered-gets-a-new-switch-2-update",
-      "source": "Nintendo Life",
-      "category": "Noticia",
-      "publishedAt": "2026-11-20T11:01:30Z"
     }
   ]
 }
