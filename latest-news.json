@@ -1,27 +1,27 @@
 {
-  "updatedAt": "2026-11-20T08:01:09.627189Z",
+  "updatedAt": "2026-11-20T11:01:33.950258Z",
   "channelUrl": "https://t.me/switch2noticias",
   "news": [
     {
-      "title": "Call of Duty: Modern Warfare 4 dominó las ventas de octubre en Estados Unidos",
-      "url": "https://vandal.elespanol.com/noticia/2026323038/call-of-duty-modern-warfare-4-domino-las-ventas-de-octubre-en-estados-unidos/",
-      "source": "Vandal",
+      "title": "Call Of Duty: Modern Warfare 4 encabeza los juegos \"más vendidos\" en octubre (EE. UU.)",
+      "url": "https://www.nintendolife.com/news/2026/11/call-of-duty-modern-warfare-4-tops-best-selling-games-in-october-us",
+      "source": "Nintendo Life",
       "category": "Noticia",
-      "publishedAt": "2026-11-19T20:01:26Z"
+      "publishedAt": "2026-11-20T11:01:32Z"
     },
     {
-      "title": "Zelda: Ocarina of Time Remake domina una semana más las ventas japonesas",
-      "url": "https://vandal.elespanol.com/noticia/2026323040/zelda-ocarina-of-time-remake-domina-una-semana-mas-las-ventas-japonesas/",
-      "source": "Vandal",
-      "category": "Noticia",
-      "publishedAt": "2026-11-19T20:01:25Z"
-    },
-    {
-      "title": "El profesor Layton y el Nuevo Mundo a vapor desvela nuevos detalles de su jugabilidad y su historia",
-      "url": "https://vandal.elespanol.com/noticia/2026323047/el-profesor-layton-y-el-nuevo-mundo-a-vapor-desvela-nuevos-detalles-de-su-jugabilidad-y-su-historia/",
-      "source": "Vandal",
+      "title": "Xenoblade Chronicles 3 versión 3.0.0 ya está disponible, aquí están las notas del parche",
+      "url": "https://www.nintendolife.com/news/2026/11/xenoblade-chronicles-3-version-3-0-0-is-now-live-here-are-the-patch-notes",
+      "source": "Nintendo Life",
       "category": "Confirmado",
-      "publishedAt": "2026-11-19T20:01:23Z"
+      "publishedAt": "2026-11-20T11:01:31Z"
+    },
+    {
+      "title": "Dynasty Warriors 3: Complete Edition Remastered obtiene una nueva actualización Switch 2",
+      "url": "https://www.nintendolife.com/news/2026/11/dynasty-warriors-3-complete-edition-remastered-gets-a-new-switch-2-update",
+      "source": "Nintendo Life",
+      "category": "Noticia",
+      "publishedAt": "2026-11-20T11:01:30Z"
     }
   ]
 }
