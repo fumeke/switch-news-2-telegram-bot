@@ -1,7 +1,14 @@
 {
-  "updatedAt": "2026-11-21T14:01:20.355482Z",
+  "updatedAt": "2026-11-21T17:01:15.686103Z",
   "channelUrl": "https://t.me/switch2noticias",
   "news": [
+    {
+      "title": "Ex de Nintendo confiesan que la saga Zelda 'cada vez se hacía más pequeña' antes de Breath of the Wild",
+      "url": "https://vandal.elespanol.com/noticia/2026325008/ex-de-nintendo-confiesan-que-la-saga-zelda-cada-vez-se-hacia-mas-pequena-antes-de-breath-of-the-wild/",
+      "source": "Vandal",
+      "category": "Noticia",
+      "publishedAt": "2026-11-21T17:01:14Z"
+    },
     {
       "title": "Zelda: Ocarina of Time cambió en 1998 nuestra forma de jugar a los videojuegos en 3D",
       "url": "https://vandal.elespanol.com/noticia/2026324027/zelda-ocarina-of-time-cambio-en-1998-nuestra-forma-de-jugar-a-los-videojuegos-en-3d/",
@@ -15,13 +22,6 @@
       "source": "Vandal",
       "category": "Confirmado",
       "publishedAt": "2026-11-21T14:01:17Z"
-    },
-    {
-      "title": "Grandes juegos rebajados a menos de 10€ en la eShop de Nintendo Switch 2 / Nintendo Switch que arrasan ahora mismo",
-      "url": "https://www.nintenderos.com/nintendo-switch-2/grandes-juegos-rebajados-a-menos-de-10e-en-la-eshop-de-nintendo-switch-2-nintendo-switch-que-arrasan-ahora-mismo/",
-      "source": "Nintenderos",
-      "category": "Noticia",
-      "publishedAt": "2026-11-21T14:01:16Z"
     }
   ]
 }
