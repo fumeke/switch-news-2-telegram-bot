@@ -1,27 +1,27 @@
 {
-  "updatedAt": "2026-11-22T11:01:24.759245Z",
+  "updatedAt": "2026-11-22T14:01:13.657855Z",
   "channelUrl": "https://t.me/switch2noticias",
   "news": [
+    {
+      "title": "Catherine: Full Body por menos de 10€ y otros 23 juegos de puzles rebajados que triunfan en las eShop de Nintendo Switch 2 / Nintendo Switch ahora mismo",
+      "url": "https://www.nintenderos.com/2026/11/catherine-full-body-por-menos-de-10e-y-otros-23-juegos-de-puzles-rebajados-que-triunfan-en-las-eshop-de-nintendo-switch-2-nintendo-switch-ahora-mismo/",
+      "source": "Nintenderos",
+      "category": "Noticia",
+      "publishedAt": "2026-11-22T14:01:12Z"
+    },
+    {
+      "title": "La consola Switch 2 de Nintendo tiene $ 50 de descuento para el Black Friday",
+      "url": "https://www.theverge.com/gadgets/1038181/nintendo-switch-2-black-friday-deal-mario-kart-world-bundle-2026-sale",
+      "source": "The Verge",
+      "category": "Noticia",
+      "publishedAt": "2026-11-22T14:01:11Z"
+    },
     {
       "title": "Más indicios apuntan a novedades de Persona 6 pronto",
       "url": "https://www.nintenderos.com/nintendo-switch-2/mas-indicios-apuntan-a-novedades-de-persona-6-pronto/",
       "source": "Nintenderos",
       "category": "Confirmado",
       "publishedAt": "2026-11-22T11:01:22Z"
-    },
-    {
-      "title": "Takaya Imamura no sabe por qué Link tenía el pelo rosa en Zelda: A Link to the Past, pero tiene esta hipótesis",
-      "url": "https://www.nintenderos.com/2026/11/takaya-imamura-no-sabe-por-que-link-tenia-el-pelo-rosa-en-zelda-a-link-to-the-past-pero-cree-conocer-el-motivo/",
-      "source": "Nintenderos",
-      "category": "Noticia",
-      "publishedAt": "2026-11-22T11:01:21Z"
-    },
-    {
-      "title": "Nuevo vistazo al traje Metroid de Samus en Metroid Ravenous",
-      "url": "https://www.nintenderos.com/nintendo-switch-2/nuevo-vistazo-al-traje-metroid-de-samus-en-metroid-ravenous/",
-      "source": "Nintenderos",
-      "category": "Confirmado",
-      "publishedAt": "2026-11-22T11:01:19Z"
     }
   ]
 }
