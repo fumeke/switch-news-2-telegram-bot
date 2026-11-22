@@ -1,7 +1,14 @@
 {
-  "updatedAt": "2026-11-22T19:31:07.128456Z",
+  "updatedAt": "2026-11-22T20:01:18.322413Z",
   "channelUrl": "https://t.me/switch2noticias",
   "news": [
+    {
+      "title": "Un vistazo detallado al nuevo peluche oficial de Donkey Kong de Build-A-Bear",
+      "url": "https://www.nintenderos.com/2026/11/un-vistazo-detallado-al-nuevo-peluche-oficial-de-donkey-kong-de-build-a-bear/",
+      "source": "Nintenderos",
+      "category": "Confirmado",
+      "publishedAt": "2026-11-22T20:01:15Z"
+    },
     {
       "title": "La obra maestra de SNES que redefinió una de las mejores sagas de Nintendo: 35 años de Zelda A Link to the Past",
       "url": "https://vandal.elespanol.com/noticia/2026326004/la-obra-maestra-de-snes-que-redefinio-una-de-las-mejores-sagas-de-nintendo-35-anos-de-zelda-a-link-to-the-past/",
@@ -15,13 +22,6 @@
       "source": "Vandal",
       "category": "Noticia",
       "publishedAt": "2026-11-22T19:31:04Z"
-    },
-    {
-      "title": "Consejos para ganar en el multijugador en Mario Kart World",
-      "url": "https://www.nintenderos.com/2026/11/consejos-para-ganar-en-el-multijugador-en-mario-kart-world/",
-      "source": "Nintenderos",
-      "category": "Noticia",
-      "publishedAt": "2026-11-22T19:31:02Z"
     }
   ]
 }
