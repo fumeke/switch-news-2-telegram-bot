@@ -1,27 +1,27 @@
 {
-  "updatedAt": "2026-11-23T14:01:16.906602Z",
+  "updatedAt": "2026-11-23T17:01:22.296153Z",
   "channelUrl": "https://t.me/switch2noticias",
   "news": [
     {
-      "title": "Nintendo lleva la magia de The Legend of Zelda: Ocarina of Time a Manga Barcelona",
-      "url": "https://www.nintenderos.com/2026/11/nintendo-lleva-la-magia-de-the-legend-of-zelda-ocarina-of-time-a-manga-barcelona/",
-      "source": "Nintenderos",
-      "category": "Confirmado",
-      "publishedAt": "2026-11-23T14:01:15Z"
-    },
-    {
-      "title": "Inquietante juego de terror inspirado en Silent Hill confirmado para Switch 2",
-      "url": "https://www.nintendolife.com/news/2026/11/unsettling-silent-hill-inspired-horror-game-confirmed-for-switch-2",
-      "source": "Nintendo Life",
-      "category": "Confirmado",
-      "publishedAt": "2026-11-23T14:01:14Z"
-    },
-    {
-      "title": "8 grandes juegos que aún no han llegado a Nintendo Switch 2 y cuya llegada parece solo cuestión de tiempo",
-      "url": "https://www.nintenderos.com/2026/11/8-grandes-juegos-que-aun-no-han-llegado-a-nintendo-switch-2-y-cuya-llegada-parece-solo-cuestion-de-tiempo/",
-      "source": "Nintenderos",
+      "title": "EA Sports FC 27 y Zelda Ocarina of Time dominaron las ventas en España antes del estreno de GTA 6",
+      "url": "https://vandal.elespanol.com/noticia/2026327012/ea-sports-fc-27-y-zelda-ocarina-of-time-dominaron-las-ventas-en-espana-antes-del-estreno-de-gta-6/",
+      "source": "Vandal",
       "category": "Noticia",
-      "publishedAt": "2026-11-23T14:01:13Z"
+      "publishedAt": "2026-11-23T17:01:21Z"
+    },
+    {
+      "title": "Tamagotchi, la mítica mascota virtual que enamoró a una generación en los 90, cumple 30 años",
+      "url": "https://vandal.elespanol.com/noticia/2026327015/tamagotchi-la-mitica-mascota-virtual-que-enamoro-a-una-generacion-en-los-90-cumple-30-anos/",
+      "source": "Vandal",
+      "category": "Noticia",
+      "publishedAt": "2026-11-23T17:01:18Z"
+    },
+    {
+      "title": "Hellraiser: Revival sorprende y derrota a Resident Evil Requiem como mejor juego de terror del año",
+      "url": "https://vandal.elespanol.com/noticia/2026327016/hellraiser-revival-sorprende-y-derrota-a-resident-evil-requiem-como-mejor-juego-de-terror-del-ano/",
+      "source": "Vandal",
+      "category": "Noticia",
+      "publishedAt": "2026-11-23T17:01:16Z"
     }
   ]
 }
