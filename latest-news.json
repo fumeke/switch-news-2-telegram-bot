@@ -1,27 +1,27 @@
 {
-  "updatedAt": "2026-11-23T08:01:05.601462Z",
+  "updatedAt": "2026-11-23T11:01:27.701556Z",
   "channelUrl": "https://t.me/switch2noticias",
   "news": [
     {
-      "title": "Un vistazo detallado al nuevo peluche oficial de Donkey Kong de Build-A-Bear",
-      "url": "https://www.nintenderos.com/2026/11/un-vistazo-detallado-al-nuevo-peluche-oficial-de-donkey-kong-de-build-a-bear/",
+      "title": "Hellraiser: Revival supera a Resident Evil Requiem y se convierte en el Juego del Año de los Horror Game Awards 2026",
+      "url": "https://www.nintenderos.com/nintendo-switch-2/hellraiser-revival-supera-a-resident-evil-requiem-y-se-convierte-en-el-juego-del-ano-de-los-horror-game-awards-2026/",
+      "source": "Nintenderos",
+      "category": "Rumor",
+      "publishedAt": "2026-11-23T11:01:25Z"
+    },
+    {
+      "title": "Fantasy VII Revelation ya ha recibido su clasificación por edades de la ESRB",
+      "url": "https://www.nintenderos.com/nintendo-switch-2/fantasy-vii-revelation-ya-ha-recibido-su-clasificacion-por-edades-de-la-esrb/",
       "source": "Nintenderos",
       "category": "Confirmado",
-      "publishedAt": "2026-11-22T20:01:15Z"
+      "publishedAt": "2026-11-23T11:01:24Z"
     },
     {
-      "title": "La obra maestra de SNES que redefinió una de las mejores sagas de Nintendo: 35 años de Zelda A Link to the Past",
-      "url": "https://vandal.elespanol.com/noticia/2026326004/la-obra-maestra-de-snes-que-redefinio-una-de-las-mejores-sagas-de-nintendo-35-anos-de-zelda-a-link-to-the-past/",
-      "source": "Vandal",
+      "title": "Análisis Pikmin 4 – Nintendo Switch 2 Edition + Academia Dandori – Nintendo Switch 2. Un jardín más bonito, pero con algunas malas hierbas",
+      "url": "https://www.nextn.es/2026/11/analisis-pikmin-4-nintendo-switch-2-edition-academia-dandori-nintendo-switch-2-un-jardin-mas-bonito-pero-con-algunas-malas-hierbas/",
+      "source": "NextN",
       "category": "Noticia",
-      "publishedAt": "2026-11-22T19:31:05Z"
-    },
-    {
-      "title": "Los ReDead iban a ser mucho más aterradores en el remake de Zelda Ocarina of Time, pero Nintendo los suavizó",
-      "url": "https://vandal.elespanol.com/noticia/2026326010/los-redead-iban-a-ser-mucho-mas-aterradores-en-el-remake-de-zelda-ocarina-of-time-pero-nintendo-los-suavizo/",
-      "source": "Vandal",
-      "category": "Noticia",
-      "publishedAt": "2026-11-22T19:31:04Z"
+      "publishedAt": "2026-11-23T11:01:21Z"
     }
   ]
 }
