@@ -1,7 +1,14 @@
 {
-  "updatedAt": "2026-11-24T19:30:59.403774Z",
+  "updatedAt": "2026-11-24T20:01:08.450427Z",
   "channelUrl": "https://t.me/switch2noticias",
   "news": [
+    {
+      "title": "Lords of the Fallen II llegará en abril de 2027 a Nintendo Switch 2",
+      "url": "https://www.nintenderos.com/nintendo-switch-2/lords-of-the-fallen-ii-llegara-en-abril-de-2027-a-nintendo-switch-2/",
+      "source": "Nintenderos",
+      "category": "Noticia",
+      "publishedAt": "2026-11-24T20:01:06Z"
+    },
     {
       "title": "GTA 6 dominó en las ventas físicas de Reino Unido durante su semana de estreno",
       "url": "https://vandal.elespanol.com/noticia/2026328020/gta-6-domino-en-las-ventas-fisicas-de-reino-unido-durante-su-semana-de-estreno/",
@@ -15,13 +22,6 @@
       "source": "Nintenderos",
       "category": "Confirmado",
       "publishedAt": "2026-11-24T19:30:56Z"
-    },
-    {
-      "title": "Un nuevo clásico de GameCube llega a Switch 2 con Nintendo Switch Online + Paquete de expansión",
-      "url": "https://vandal.elespanol.com/noticia/2026328008/un-nuevo-clasico-de-gamecube-llega-a-switch-2-con-nintendo-switch-online-paquete-de-expansion/",
-      "source": "Vandal",
-      "category": "Noticia",
-      "publishedAt": "2026-11-24T17:01:25Z"
     }
   ]
 }
