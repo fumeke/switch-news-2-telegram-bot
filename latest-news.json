@@ -1,27 +1,27 @@
 {
-  "updatedAt": "2026-11-24T14:01:14.948724Z",
+  "updatedAt": "2026-11-24T17:01:26.531831Z",
   "channelUrl": "https://t.me/switch2noticias",
   "news": [
     {
-      "title": "Nintendo amplía la biblioteca GameCube de Switch 2 con otro juego esta semana",
-      "url": "https://www.nintendolife.com/news/2026/11/nintendo-expands-switch-2s-gamecube-library-with-another-game-this-week",
-      "source": "Nintendo Life",
+      "title": "Un nuevo clásico de GameCube llega a Switch 2 con Nintendo Switch Online + Paquete de expansión",
+      "url": "https://vandal.elespanol.com/noticia/2026328008/un-nuevo-clasico-de-gamecube-llega-a-switch-2-con-nintendo-switch-online-paquete-de-expansion/",
+      "source": "Vandal",
+      "category": "Noticia",
+      "publishedAt": "2026-11-24T17:01:25Z"
+    },
+    {
+      "title": "Attack on Titan 3 se deja ver en un nuevo gameplay de más de 8 minutos en el interior de los muros",
+      "url": "https://vandal.elespanol.com/noticia/2026328009/attack-on-titan-3-se-deja-ver-en-un-nuevo-gameplay-de-mas-de-8-minutos-en-el-interior-de-los-muros/",
+      "source": "Vandal",
+      "category": "Noticia",
+      "publishedAt": "2026-11-24T17:01:20Z"
+    },
+    {
+      "title": "Final Fantasy VII Revelation ya ha sido clasificado por edades y se revelan nuevos detalles de su contenido",
+      "url": "https://vandal.elespanol.com/noticia/2026328010/final-fantasy-vii-revelation-ya-ha-sido-clasificado-por-edades-y-se-revelan-nuevos-detalles-de-su-contenido/",
+      "source": "Vandal",
       "category": "Confirmado",
-      "publishedAt": "2026-11-24T14:01:13Z"
-    },
-    {
-      "title": "¿Debería el nuevo Zelda de Nintendo Switch 2 seguir el estilo de Ocarina of Time o apostar por uno propio?",
-      "url": "https://www.nintenderos.com/2026/11/deberia-el-nuevo-zelda-de-nintendo-switch-2-seguir-el-estilo-de-ocarina-of-time-o-apostar-por-uno-propio/",
-      "source": "Nintenderos",
-      "category": "Noticia",
-      "publishedAt": "2026-11-24T14:01:12Z"
-    },
-    {
-      "title": "Final Fantasy VII Revelation ha sido clasificado para Switch 2 por la ESRB",
-      "url": "https://www.nintendolife.com/news/2026/11/final-fantasy-vii-revelation-has-been-rated-for-switch-2-by-the-esrb",
-      "source": "Nintendo Life",
-      "category": "Noticia",
-      "publishedAt": "2026-11-24T11:01:30Z"
+      "publishedAt": "2026-11-24T17:01:19Z"
     }
   ]
 }
