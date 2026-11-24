@@ -1,27 +1,27 @@
 {
-  "updatedAt": "2026-11-24T17:01:26.531831Z",
+  "updatedAt": "2026-11-24T19:30:59.403774Z",
   "channelUrl": "https://t.me/switch2noticias",
   "news": [
+    {
+      "title": "GTA 6 dominó en las ventas físicas de Reino Unido durante su semana de estreno",
+      "url": "https://vandal.elespanol.com/noticia/2026328020/gta-6-domino-en-las-ventas-fisicas-de-reino-unido-durante-su-semana-de-estreno/",
+      "source": "Vandal",
+      "category": "Noticia",
+      "publishedAt": "2026-11-24T19:30:58Z"
+    },
+    {
+      "title": "The Wolf Among Us Remastered confirma fechas oficiales para Nintendo Switch y que sigue de camino a Nintendo Switch 2",
+      "url": "https://www.nintenderos.com/nintendo-switch-2/the-wolf-among-us-remastered-confirma-fechas-oficiales-para-nintendo-switch-y-que-sigue-de-camino-a-nintendo-switch-2/",
+      "source": "Nintenderos",
+      "category": "Confirmado",
+      "publishedAt": "2026-11-24T19:30:56Z"
+    },
     {
       "title": "Un nuevo clásico de GameCube llega a Switch 2 con Nintendo Switch Online + Paquete de expansión",
       "url": "https://vandal.elespanol.com/noticia/2026328008/un-nuevo-clasico-de-gamecube-llega-a-switch-2-con-nintendo-switch-online-paquete-de-expansion/",
       "source": "Vandal",
       "category": "Noticia",
       "publishedAt": "2026-11-24T17:01:25Z"
-    },
-    {
-      "title": "Attack on Titan 3 se deja ver en un nuevo gameplay de más de 8 minutos en el interior de los muros",
-      "url": "https://vandal.elespanol.com/noticia/2026328009/attack-on-titan-3-se-deja-ver-en-un-nuevo-gameplay-de-mas-de-8-minutos-en-el-interior-de-los-muros/",
-      "source": "Vandal",
-      "category": "Noticia",
-      "publishedAt": "2026-11-24T17:01:20Z"
-    },
-    {
-      "title": "Final Fantasy VII Revelation ya ha sido clasificado por edades y se revelan nuevos detalles de su contenido",
-      "url": "https://vandal.elespanol.com/noticia/2026328010/final-fantasy-vii-revelation-ya-ha-sido-clasificado-por-edades-y-se-revelan-nuevos-detalles-de-su-contenido/",
-      "source": "Vandal",
-      "category": "Confirmado",
-      "publishedAt": "2026-11-24T17:01:19Z"
     }
   ]
 }
