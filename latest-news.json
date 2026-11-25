@@ -1,27 +1,27 @@
 {
-  "updatedAt": "2026-11-25T08:01:06.509377Z",
+  "updatedAt": "2026-11-25T11:01:43.298104Z",
   "channelUrl": "https://t.me/switch2noticias",
   "news": [
     {
-      "title": "Lords of the Fallen II llegará en abril de 2027 a Nintendo Switch 2",
-      "url": "https://www.nintenderos.com/nintendo-switch-2/lords-of-the-fallen-ii-llegara-en-abril-de-2027-a-nintendo-switch-2/",
-      "source": "Nintenderos",
-      "category": "Noticia",
-      "publishedAt": "2026-11-24T20:01:06Z"
-    },
-    {
-      "title": "GTA 6 dominó en las ventas físicas de Reino Unido durante su semana de estreno",
-      "url": "https://vandal.elespanol.com/noticia/2026328020/gta-6-domino-en-las-ventas-fisicas-de-reino-unido-durante-su-semana-de-estreno/",
-      "source": "Vandal",
-      "category": "Noticia",
-      "publishedAt": "2026-11-24T19:30:58Z"
-    },
-    {
-      "title": "The Wolf Among Us Remastered confirma fechas oficiales para Nintendo Switch y que sigue de camino a Nintendo Switch 2",
-      "url": "https://www.nintenderos.com/nintendo-switch-2/the-wolf-among-us-remastered-confirma-fechas-oficiales-para-nintendo-switch-y-que-sigue-de-camino-a-nintendo-switch-2/",
-      "source": "Nintenderos",
+      "title": "Mario Kart World se ha actualizado a la versión 1.9.0. Estas son las notas completas del parche",
+      "url": "https://www.nintendolife.com/news/2026/11/mario-kart-world-has-been-updated-to-version-1-9-0-here-are-the-full-patch-notes",
+      "source": "Nintendo Life",
       "category": "Confirmado",
-      "publishedAt": "2026-11-24T19:30:56Z"
+      "publishedAt": "2026-11-25T11:01:42Z"
+    },
+    {
+      "title": "«Hemos visto vuestras esperanzadoras peticiones»: Fabraz anuncia el lanzamiento de Demon Tides Switch 2",
+      "url": "https://www.nintendolife.com/news/2026/11/we-saw-your-hopeful-requests-fabraz-announces-demon-tides-switch-2-release",
+      "source": "Nintendo Life",
+      "category": "Confirmado",
+      "publishedAt": "2026-11-25T11:01:40Z"
+    },
+    {
+      "title": "Desbloquea este locutor secreto con comentarios insultantes mediante un código especial en Wave Race: Blue Storm",
+      "url": "https://www.nintenderos.com/nintendo-switch-2/desbloquea-este-locutor-secreto-con-comentarios-insultantes-mediante-un-codigo-especial-en-wave-race-blue-storm/",
+      "source": "Nintenderos",
+      "category": "Noticia",
+      "publishedAt": "2026-11-25T11:01:39Z"
     }
   ]
 }
