@@ -1,27 +1,27 @@
 {
-  "updatedAt": "2026-11-26T11:01:48.748563Z",
+  "updatedAt": "2026-11-26T14:01:32.559790Z",
   "channelUrl": "https://t.me/switch2noticias",
   "news": [
     {
-      "title": "Tetris 99 celebra una nueva MAXIMUS CUP con Pikmin 4: Nintendo Switch 2 Edition + Academia Dandori",
-      "url": "https://www.nextn.es/2026/11/tetris-99-celebra-maximus-cup-con-pikmin-4/",
-      "source": "NextN",
+      "title": "Uno de los mejores plataformas de 2019 regresa mejorado a PS5, Switch 2 y PC con una actualización gratis",
+      "url": "https://vandal.elespanol.com/noticia/2026329040/uno-de-los-mejores-plataformas-de-2019-regresa-mejorado-a-ps5-switch-2-y-pc-con-una-actualizacion-gratis/",
+      "source": "Vandal",
+      "category": "Confirmado",
+      "publishedAt": "2026-11-26T14:01:31Z"
+    },
+    {
+      "title": "Juegos de Nintendo Switch 2 que se han quedado en Japón: las mejores joyas que aún no han llegado a Occidente",
+      "url": "https://www.nintenderos.com/nintendo-switch-2/juegos-de-nintendo-switch-2-que-se-han-quedado-en-japon-las-mejores-joyas-que-aun-no-han-llegado-a-occidente/",
+      "source": "Nintenderos",
       "category": "Noticia",
-      "publishedAt": "2026-11-26T11:01:47Z"
+      "publishedAt": "2026-11-26T14:01:29Z"
     },
     {
-      "title": "Nintendo reabastece copias físicas de Metroid Dread antes del lanzamiento de Metroid Ravenous",
-      "url": "https://www.nintendolife.com/news/2026/11/nintendo-restocks-metroid-dread-physical-copies-ahead-of-metroid-ravenous-launch",
-      "source": "Nintendo Life",
+      "title": "Zelda: Ocarina of Time corrige el glitch del salto infinito con su última actualización",
+      "url": "https://www.nintenderos.com/nintendo-switch-2/zelda-ocarina-of-time-corrige-el-glitch-del-salto-infinito-con-su-ultima-actualizacion/",
+      "source": "Nintenderos",
       "category": "Confirmado",
-      "publishedAt": "2026-11-26T11:01:45Z"
-    },
-    {
-      "title": "The Legend Of Zelda: Ocarina Of Time Switch 2 actualizado (versión 1.1.2), aquí están las notas del parche",
-      "url": "https://www.nintendolife.com/news/2026/11/the-legend-of-zelda-ocarina-of-time-switch-2-updated-version-1-1-2-here-are-the-patch-notes",
-      "source": "Nintendo Life",
-      "category": "Confirmado",
-      "publishedAt": "2026-11-26T11:01:42Z"
+      "publishedAt": "2026-11-26T14:01:26Z"
     }
   ]
 }
