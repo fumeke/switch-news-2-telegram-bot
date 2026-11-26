@@ -43,7 +43,7 @@ Crea un archivo `.env` en la raíz (no debe subirse al repositorio):
 ```env
 TELEGRAM_BOT_TOKEN=123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11
 TELEGRAM_CHAT_ID=-1001234567890
-TELEGRAM_CHANNEL_URL=https://t.me/nombre_del_canal
+TELEGRAM_CHANNEL_URL=https://t.me/switch2noticias
 DATABASE_PATH=seen.db
 ADMIN_CHAT_ID=123456789
 
@@ -72,7 +72,7 @@ NEWS_FEED_PATH=_site/latest-news.json
 
 Las traducciones de titular y resumen se realizan por separado: si una falla, se conserva la otra. Para noticias inglesas, el mensaje siempre avisa antes del enlace de que la página de destino está en inglés. Los resultados se guardan durante siete días en `translation_cache`.
 
-El mensaje promocional se envía una sola vez al día al final de la primera ejecución a partir de `PROMO_HOUR` en `CHANNEL_TIMEZONE` e incluye un botón que abre directamente la acción de compartir el canal. El bot obtiene el enlace a partir del nombre público del canal; `TELEGRAM_CHANNEL_URL` permite indicarlo explícitamente y es necesario si Telegram no devuelve un nombre público o un enlace de invitación. Si no se define `PROMO_TEXT`, el bot rota automáticamente entre cuatro mensajes. La fecha del último envío queda guardada en SQLite, por lo que un reintento de GitHub Actions no lo duplica. `PROMO_TEXT` admite el HTML compatible con Telegram.
+El mensaje promocional se envía una sola vez al día al final de la primera ejecución a partir de `PROMO_HOUR` en `CHANNEL_TIMEZONE`, usa la foto de perfil del canal como imagen e incluye un botón que abre directamente la acción de compartirlo. Si Telegram no devuelve la foto, la promoción se publica como mensaje de texto. Los botones «Compartir» de las noticias comparten el canal `https://t.me/switch2noticias`, mientras que «Leer noticia» conserva el enlace al medio original. `TELEGRAM_CHANNEL_URL` permite sustituir la dirección del canal. Si no se define `PROMO_TEXT`, el bot rota automáticamente entre ocho mensajes. La fecha del último envío queda guardada en SQLite, por lo que un reintento de GitHub Actions no lo duplica. `PROMO_TEXT` admite el HTML compatible con Telegram.
 
 La promoción de Switch eShop Saver se publica como mensaje independiente una vez por semana, al final de la ejecución del miércoles a las 20:30, con botones directos a App Store y Google Play. El día usa la numeración de Python (`0` es lunes y `6` domingo) y puede cambiarse con `APP_PROMO_WEEKDAY`; la hora y los minutos se controlan con `APP_PROMO_HOUR` y `APP_PROMO_MINUTE`. La semana del último envío se guarda en SQLite para evitar duplicados.
 

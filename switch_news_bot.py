@@ -25,7 +25,7 @@ load_dotenv()
 
 TELEGRAM_BOT_TOKEN = environ.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = environ.get("TELEGRAM_CHAT_ID", "")
-TELEGRAM_CHANNEL_URL = environ.get("TELEGRAM_CHANNEL_URL", "")
+TELEGRAM_CHANNEL_URL = environ.get("TELEGRAM_CHANNEL_URL", "https://t.me/switch2noticias")
 DATABASE_PATH = environ.get("DATABASE_PATH", "seen.db")
 TRANSLATION_ENABLED = environ.get("TRANSLATION_ENABLED", "true").lower() in {"1", "true", "yes", "si"}
 MIN_RELEVANCE_SCORE = int(environ.get("MIN_RELEVANCE_SCORE", "4"))
@@ -138,6 +138,20 @@ RELEASE_TERMS = re.compile(
     r"\b(?:release date|launch(?:es|ing)?|releases?|fecha de lanzamiento|se lanza|llega(?:rá)?|sale a la venta)\b",
     re.I,
 )
+NON_GAME_RELEASE_TITLES = re.compile(
+    r"\b(?:gu[ií]a|lista de|todas? las|canciones?|notas se ha llevado|ofrece m[aá]s detalles|"
+    r"v[ií]deo oficial|todo lo que (?:debes|necesitas) saber)\b",
+    re.I,
+)
+# No existe una versión de GTA 6 confirmada para Switch 2. Mantenerlo fuera del
+# calendario evita conservar falsos positivos antiguos procedentes de artículos
+# que mencionan la consola al hablar de otras plataformas.
+UNCONFIRMED_SWITCH_2_GAMES = {
+    "gta 6",
+    "gta vi",
+    "grand theft auto 6",
+    "grand theft auto vi",
+}
 MAJOR_NEWS_TERMS = re.compile(
     r"\b(?:nintendo\s+direct|new game|nuevo juego|announc|anunci|reveal|presenta|release date|"
     r"fecha de lanzamiento|precio|price|launch|lanzamiento|sales|ventas|hardware|console|consola)\b",
@@ -342,15 +356,27 @@ def release_name_from_title(title: str) -> str:
     return name.strip(" :-–—")[:160]
 
 
+def valid_switch_2_release_name(name: str) -> bool:
+    normalized = title_key(name)
+    return (
+        len(normalized) >= 3
+        and normalized not in UNCONFIRMED_SWITCH_2_GAMES
+        and not NON_GAME_RELEASE_TITLES.search(name)
+    )
+
+
 def extract_release(story: Story, today=None):
     if story.status == "rumor" or story.reliability < 2:
         return None
-    complete_text = f"{story.title} {story.summary}"
-    if not any(pattern.search(complete_text) for pattern, _ in SWITCH_2_TERMS):
-        return None
     segments = [story.title, *re.split(r"(?<=[.!?])\s+", story.summary)]
     release_date = next(
-        (parse_release_date(segment) for segment in segments if RELEASE_TERMS.search(segment) and parse_release_date(segment)),
+        (
+            parse_release_date(segment)
+            for segment in segments
+            if RELEASE_TERMS.search(segment)
+            and any(pattern.search(segment) for pattern, _ in SWITCH_2_TERMS)
+            and parse_release_date(segment)
+        ),
         None,
     )
     if not release_date:
@@ -359,12 +385,21 @@ def extract_release(story: Story, today=None):
     if release_date < today or release_date > today + timedelta(days=365):
         return None
     name = release_name_from_title(story.title)
+    if not valid_switch_2_release_name(name):
+        return None
     key = hashlib.sha256(title_key(name).encode()).hexdigest()[:20]
     return key, name, release_date.isoformat(), story.source, story.link
 
 
 def update_releases(conn: sqlite3.Connection, stories: Iterable[Story], today=None) -> bool:
-    changed = False
+    invalid_keys = [
+        release_key
+        for release_key, name in conn.execute("SELECT release_key, name FROM releases").fetchall()
+        if not valid_switch_2_release_name(release_name_from_title(name))
+    ]
+    if invalid_keys:
+        conn.executemany("DELETE FROM releases WHERE release_key = ?", [(key,) for key in invalid_keys])
+    changed = bool(invalid_keys)
     for story in stories:
         release = extract_release(story, today=today)
         if not release:
@@ -827,13 +862,14 @@ def send_telegram_story(token: str, chat_id: str, story: Story) -> bool:
     message = build_message(story)
     common = {"chat_id": chat_id.strip(), "parse_mode": "HTML"}
     if story.link:
-        share_url = "https://t.me/share/url?url=" + quote(story.link, safe="") + "&text=" + quote(
-            f"{story.title}\n\nSigue las noticias de Nintendo Switch 2 en este canal.", safe=""
-        )
-        keyboard = {"inline_keyboard": [[
-            {"text": "📰 Leer noticia", "url": story.link},
-            {"text": "🔗 Compartir", "url": share_url},
-        ]]}
+        buttons = [{"text": "📰 Leer noticia", "url": story.link}]
+        channel_url = get_channel_share_url()
+        if channel_url:
+            share_url = "https://t.me/share/url?url=" + quote(channel_url, safe="") + "&text=" + quote(
+                f"{story.title}\n\nSigue las noticias de Nintendo Switch 2 en este canal.", safe=""
+            )
+            buttons.append({"text": "🔗 Compartir", "url": share_url})
+        keyboard = {"inline_keyboard": [buttons]}
         common["reply_markup"] = json.dumps(keyboard)
     if story.image_url:
         if telegram_request(token, "sendPhoto", {**common, "photo": story.image_url, "caption": message}):
@@ -979,6 +1015,16 @@ def get_channel_share_url() -> str:
     return chat.get("invite_link", "")
 
 
+def get_channel_photo_file_id() -> str:
+    response = telegram_call(
+        TELEGRAM_BOT_TOKEN,
+        "getChat",
+        {"chat_id": TELEGRAM_CHAT_ID.strip()},
+    )
+    photo = response.get("result", {}).get("photo", {}) if response else {}
+    return photo.get("big_file_id") or photo.get("small_file_id", "")
+
+
 def send_daily_promo(conn: sqlite3.Connection, dry_run: bool = False) -> None:
     now = local_now()
     if not promo_is_due(conn, now):
@@ -989,9 +1035,7 @@ def send_daily_promo(conn: sqlite3.Connection, dry_run: bool = False) -> None:
         return
     payload = {
         "chat_id": TELEGRAM_CHAT_ID.strip(),
-        "text": promo_text,
         "parse_mode": "HTML",
-        "disable_web_page_preview": "true",
     }
     channel_url = get_channel_share_url()
     if channel_url:
@@ -1005,7 +1049,23 @@ def send_daily_promo(conn: sqlite3.Connection, dry_run: bool = False) -> None:
         logger.warning(
             "No se pudo obtener el enlace del canal; configura TELEGRAM_CHANNEL_URL para mostrar el botón de compartir."
         )
-    if telegram_request(TELEGRAM_BOT_TOKEN, "sendMessage", payload):
+    photo_file_id = get_channel_photo_file_id()
+    sent = False
+    if photo_file_id:
+        sent = telegram_request(TELEGRAM_BOT_TOKEN, "sendPhoto", {
+            **payload,
+            "photo": photo_file_id,
+            "caption": promo_text,
+        })
+        if not sent:
+            logger.warning("No se pudo adjuntar el logo del canal; se reintentará como mensaje de texto.")
+    if not sent:
+        sent = telegram_request(TELEGRAM_BOT_TOKEN, "sendMessage", {
+            **payload,
+            "text": promo_text,
+            "disable_web_page_preview": "true",
+        })
+    if sent:
         mark_promo_as_sent(conn, now)
         logger.info("Mensaje promocional diario enviado.")
     else:
@@ -1199,6 +1259,8 @@ def calendar_rows(conn: sqlite3.Connection, today=None) -> list:
     unique = {}
     for name, release_date, source, link in stored_rows:
         game_name = release_name_from_title(name)
+        if not valid_switch_2_release_name(game_name):
+            continue
         key = (release_date, title_key(game_name))
         unique.setdefault(key, (game_name, release_date, source, link))
     return sorted(unique.values(), key=lambda row: (row[1], title_key(row[0])))

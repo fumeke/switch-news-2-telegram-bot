@@ -139,6 +139,7 @@ def test_similar_coverage_is_merged_and_sources_are_preserved():
 
 def test_telegram_story_includes_read_and_share_buttons(monkeypatch):
     calls = []
+    monkeypatch.setattr(bot, "TELEGRAM_CHANNEL_URL", "https://t.me/switch2noticias")
     monkeypatch.setattr(bot, "telegram_request", lambda token, method, payload: calls.append(payload) or True)
     item = story("Nueva actualización de Switch 2")
     assert bot.send_telegram_story("token", "chat", item)
@@ -148,6 +149,8 @@ def test_telegram_story_includes_read_and_share_buttons(monkeypatch):
     assert keyboard[0] == {"text": "📰 Leer noticia", "url": item.link}
     assert keyboard[1]["text"] == "🔗 Compartir"
     assert keyboard[1]["url"].startswith("https://t.me/share/url?")
+    assert "url=https%3A%2F%2Ft.me%2Fswitch2noticias" in keyboard[1]["url"]
+    assert quote(item.link, safe="") not in keyboard[1]["url"]
 
 
 def test_concise_summary_uses_at_most_two_sentences():
@@ -202,16 +205,48 @@ def test_daily_promo_includes_channel_share_button(tmp_path, monkeypatch):
     now = datetime(2026, 9, 2, 21, 0, tzinfo=ZoneInfo("Europe/Madrid"))
     monkeypatch.setattr(bot, "local_now", lambda: now)
     monkeypatch.setattr(bot, "TELEGRAM_CHANNEL_URL", "https://t.me/switch_news_2")
-    monkeypatch.setattr(bot, "telegram_request", lambda token, method, payload: calls.append(payload) or True)
+    monkeypatch.setattr(
+        bot,
+        "telegram_call",
+        lambda token, method, payload: {"result": {"photo": {"big_file_id": "channel-logo"}}},
+    )
+    monkeypatch.setattr(
+        bot,
+        "telegram_request",
+        lambda token, method, payload: calls.append((method, payload)) or True,
+    )
 
     bot.send_daily_promo(conn)
 
-    keyboard = json.loads(calls[0]["reply_markup"])["inline_keyboard"]
+    method, payload = calls[0]
+    keyboard = json.loads(payload["reply_markup"])["inline_keyboard"]
+    assert method == "sendPhoto"
+    assert payload["photo"] == "channel-logo"
+    assert payload["caption"] == bot.daily_promo_text(now)
     assert keyboard[0][0]["text"] == "📣 Compartir canal"
     assert keyboard[0][0]["url"].startswith(
         "https://t.me/share/url?url=https%3A%2F%2Ft.me%2Fswitch_news_2&text="
     )
     assert quote(bot.channel_share_text(now), safe="") in keyboard[0][0]["url"]
+
+
+def test_daily_promo_falls_back_to_text_without_channel_photo(tmp_path, monkeypatch):
+    conn = bot.create_database(str(tmp_path / "promo.db"))
+    calls = []
+    now = datetime(2026, 9, 2, 21, 0, tzinfo=ZoneInfo("Europe/Madrid"))
+    monkeypatch.setattr(bot, "local_now", lambda: now)
+    monkeypatch.setattr(bot, "TELEGRAM_CHANNEL_URL", "https://t.me/switch_news_2")
+    monkeypatch.setattr(bot, "telegram_call", lambda token, method, payload: {"result": {}})
+    monkeypatch.setattr(
+        bot,
+        "telegram_request",
+        lambda token, method, payload: calls.append((method, payload)) or True,
+    )
+
+    bot.send_daily_promo(conn)
+
+    assert calls[0][0] == "sendMessage"
+    assert calls[0][1]["text"] == bot.daily_promo_text(now)
 
 
 def test_app_promo_is_only_due_once_on_wednesday_after_2030(tmp_path, monkeypatch):
@@ -509,6 +544,23 @@ def test_confirmed_release_date_is_extracted_but_rumor_is_rejected():
     assert bot.extract_release(item, today=datetime(2026, 9, 2).date()) is None
 
 
+def test_release_requires_date_platform_and_launch_context_in_same_sentence():
+    item = story(
+        "Guía: lista de todas las canciones del Stage Tour",
+        "La guía llega el 10 de diciembre de 2026. También publicamos noticias de Nintendo Switch 2.",
+    )
+    item.reliability = 3
+
+    assert bot.extract_release(item, today=datetime(2026, 9, 2).date()) is None
+
+
+def test_unconfirmed_switch_2_game_is_rejected_even_with_noisy_feed_text():
+    item = story("GTA 6", "GTA 6 llega el 19 de noviembre de 2026 para Nintendo Switch 2.")
+    item.reliability = 3
+
+    assert bot.extract_release(item, today=datetime(2026, 9, 2).date()) is None
+
+
 def test_release_name_is_cleaned_from_review_roundup():
     title = "Round Up: The Reviews For Orbitals On Switch 2 Are In"
     assert bot.release_name_from_title(title) == "Orbitals"
@@ -551,6 +603,26 @@ def test_calendar_deduplicates_old_headlines_and_only_shows_date_and_game(tmp_pa
     assert "Fuente A" not in message
     assert "Solo fechas confirmadas" not in message
     assert "Actualizado:" not in message
+
+
+def test_calendar_removes_legacy_guides_and_unconfirmed_games(tmp_path):
+    conn = bot.create_database(str(tmp_path / "filtered-calendar.db"))
+    conn.executemany(
+        "INSERT INTO releases (release_key, name, release_date, source, link, updated_at) "
+        "VALUES (?, ?, ?, ?, ?, ?)",
+        [
+            ("guide", "Guía: Lista de todas las canciones del Stage Tour", "2026-12-10", "Fuente", "", 1),
+            ("gta", "GTA 6", "2026-11-19", "Fuente", "", 1),
+            ("valid", "Rayman Legends Retold", "2026-12-03", "Fuente", "", 1),
+        ],
+    )
+    conn.commit()
+
+    assert bot.update_releases(conn, [], today=datetime(2026, 11, 26).date())
+    rows = bot.calendar_rows(conn, today=datetime(2026, 11, 26).date())
+
+    assert [row[0] for row in rows] == ["Rayman Legends Retold"]
+    assert conn.execute("SELECT COUNT(*) FROM releases").fetchone()[0] == 1
 
 
 def test_available_releases_link_to_amazon_with_affiliate_tag(tmp_path, monkeypatch):
