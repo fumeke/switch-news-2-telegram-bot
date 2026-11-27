@@ -1,27 +1,27 @@
 {
-  "updatedAt": "2026-11-27T17:01:49.815873Z",
+  "updatedAt": "2026-11-27T19:31:17.222193Z",
   "channelUrl": "https://t.me/switch2noticias",
   "news": [
     {
-      "title": "Rayman Legends Retold se ha beneficiado de lo aprendido por Ubisoft Milan con los Mario + Rabbids",
-      "url": "https://vandal.elespanol.com/noticia/2026330033/rayman-legends-retold-se-ha-beneficiado-de-todo-lo-aprendido-por-ubisoft-milan-con-los-juegos-de-mario-rabbids/",
-      "source": "Vandal",
-      "category": "Noticia",
-      "publishedAt": "2026-11-27T17:01:48Z"
-    },
-    {
-      "title": "Team Ninja admite el uso de la IA en el desarrollo de sus juegos, pero solo para tareas de control de calidad",
-      "url": "https://vandal.elespanol.com/noticia/2026331007/team-ninja-admite-el-uso-de-la-ia-en-el-desarrollo-de-sus-juegos-pero-solo-para-tareas-de-control-de-calidad/",
+      "title": "The Witcher 3 recibe 46 nuevos mods gratis en PC y consolas con nuevas aventuras, cacerías y mucho más",
+      "url": "https://vandal.elespanol.com/noticia/2026331018/the-witcher-3-recibe-46-nuevos-mods-gratis-en-pc-y-consolas-con-nuevas-aventuras-cacerias-y-mucho-mas/",
       "source": "Vandal",
       "category": "Confirmado",
-      "publishedAt": "2026-11-27T17:01:46Z"
+      "publishedAt": "2026-11-27T19:31:16Z"
     },
     {
-      "title": "Square Enix lo confirma: su apoyo a Nintendo Switch 2 ha ayudado a aumentar sus ingresos y beneficios",
-      "url": "https://vandal.elespanol.com/noticia/2026331011/square-enix-lo-confirma-su-apoyo-a-nintendo-switch-2-ha-ayudado-a-aumentar-sus-ingresos-y-beneficios/",
+      "title": "Picross alcanza un nuevo hito de ventas en Nintendo Switch y estrena demo de Picross S Climax",
+      "url": "https://vandal.elespanol.com/noticia/2026331020/picross-alcanza-un-nuevo-hito-de-ventas-en-nintendo-switch-y-estrena-demo-de-picross-s-climax/",
       "source": "Vandal",
       "category": "Confirmado",
-      "publishedAt": "2026-11-27T17:01:44Z"
+      "publishedAt": "2026-11-27T19:31:13Z"
+    },
+    {
+      "title": "Marvelous, la compañía de Story of Seasons, planea recortar plantilla y ofrece jubilaciones anticipadas",
+      "url": "https://vandal.elespanol.com/noticia/2026331025/marvelous-la-compania-de-story-of-seasons-planea-recortar-plantilla-y-ofrece-jubilaciones-anticipadas/",
+      "source": "Vandal",
+      "category": "Rumor",
+      "publishedAt": "2026-11-27T19:31:11Z"
     }
   ]
 }
