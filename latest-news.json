@@ -1,27 +1,27 @@
 {
-  "updatedAt": "2026-11-27T19:31:17.222193Z",
+  "updatedAt": "2026-11-27T20:01:20.618038Z",
   "channelUrl": "https://t.me/switch2noticias",
   "news": [
+    {
+      "title": "El anime de Pokémon podría haber dado una importante pista sobre cuándo llegarán Pokémon Viento y Oleaje",
+      "url": "https://vandal.elespanol.com/noticia/2026331036/el-anime-de-pokemon-podria-haber-dado-una-importante-pista-sobre-cuando-llegaran-pokemon-viento-y-oleaje/",
+      "source": "Vandal",
+      "category": "Rumor",
+      "publishedAt": "2026-11-27T20:01:17Z"
+    },
+    {
+      "title": "De jugar a Rayman Legends con su hijo a poner voz a Rayman: Así ha vivido Javier Lorca el regreso del personaje",
+      "url": "https://vandal.elespanol.com/noticia/2026331037/de-jugar-a-rayman-legends-con-su-hijo-a-poner-voz-a-rayman-asi-ha-vivido-javier-lorca-el-regreso-del-personaje/",
+      "source": "Vandal",
+      "category": "Noticia",
+      "publishedAt": "2026-11-27T20:01:15Z"
+    },
     {
       "title": "The Witcher 3 recibe 46 nuevos mods gratis en PC y consolas con nuevas aventuras, cacerías y mucho más",
       "url": "https://vandal.elespanol.com/noticia/2026331018/the-witcher-3-recibe-46-nuevos-mods-gratis-en-pc-y-consolas-con-nuevas-aventuras-cacerias-y-mucho-mas/",
       "source": "Vandal",
       "category": "Confirmado",
       "publishedAt": "2026-11-27T19:31:16Z"
-    },
-    {
-      "title": "Picross alcanza un nuevo hito de ventas en Nintendo Switch y estrena demo de Picross S Climax",
-      "url": "https://vandal.elespanol.com/noticia/2026331020/picross-alcanza-un-nuevo-hito-de-ventas-en-nintendo-switch-y-estrena-demo-de-picross-s-climax/",
-      "source": "Vandal",
-      "category": "Confirmado",
-      "publishedAt": "2026-11-27T19:31:13Z"
-    },
-    {
-      "title": "Marvelous, la compañía de Story of Seasons, planea recortar plantilla y ofrece jubilaciones anticipadas",
-      "url": "https://vandal.elespanol.com/noticia/2026331025/marvelous-la-compania-de-story-of-seasons-planea-recortar-plantilla-y-ofrece-jubilaciones-anticipadas/",
-      "source": "Vandal",
-      "category": "Rumor",
-      "publishedAt": "2026-11-27T19:31:11Z"
     }
   ]
 }
