@@ -1,27 +1,27 @@
 {
-  "updatedAt": "2026-11-28T11:01:32.924675Z",
+  "updatedAt": "2026-11-28T14:01:32.170301Z",
   "channelUrl": "https://t.me/switch2noticias",
   "news": [
     {
-      "title": "Aviso de aplazamiento del lanzamiento del paquete Nintendo Switch 2 + MONSTER HUNTER WILDS - Nintendo",
-      "url": "https://news.google.com/rss/articles/CBMicEFVX3lxTE5JcmFqeE1UMVdqc21sQUFSbmdDUmNfd1BiVTlfWUpKVmtvLVJWTkpYN3NYSVB0SndsSnowekxTb3dPSjZxbFp5NXZwcl9LdlVfQWkxazBIdjFEdG1NQkY0VzgtMlo3RmxET3djOHVGVEo?oc=5",
-      "source": "Nintendo (oficial)",
-      "category": "Noticia",
-      "publishedAt": "2026-11-28T11:01:31Z"
+      "title": "De Ocarina of Time a Majora’s Mask: el maravilloso reto de un solo año",
+      "url": "https://vandal.elespanol.com/noticia/2026332007/de-ocarina-of-time-a-majoras-mask-el-maravilloso-reto-de-un-solo-ano/",
+      "source": "Vandal",
+      "category": "Confirmado",
+      "publishedAt": "2026-11-28T14:01:31Z"
     },
     {
-      "title": "Pokémon Viento y Oleaje muestra nuevas ilustraciones oficiales de sus Pokémon iniciales",
-      "url": "https://www.nintenderos.com/nintendo-switch-2/pokemon-viento-y-oleaje-muestra-nuevas-ilustraciones-oficiales-de-sus-pokemon-iniciales/",
+      "title": "Las ofertas del Black Friday de Raylo significan que puedes conseguir una PS5 con GTA 6 y otras consolas de inmediato por menos de £ 20 al mes",
+      "url": "https://www.ign.com/articles/raylos-black-friday-gaming-console-deals",
+      "source": "IGN",
+      "category": "Noticia",
+      "publishedAt": "2026-11-28T14:01:28Z"
+    },
+    {
+      "title": "Pokémon Viento y Oleaje sigue siendo el juego más esperado del momento en Japón",
+      "url": "https://www.nintenderos.com/nintendo-switch-2/pokemon-viento-y-oleaje-sigue-siendo-el-juego-mas-esperado-del-momento-en-japon/",
       "source": "Nintenderos",
       "category": "Rumor",
-      "publishedAt": "2026-11-28T11:01:30Z"
-    },
-    {
-      "title": "La actualización gratuita de Yooka-Laylee se salta Xbox",
-      "url": "https://www.theverge.com/games/1044715/yooka-laylees-free-upgrade-is-skipping-xbox",
-      "source": "The Verge",
-      "category": "Noticia",
-      "publishedAt": "2026-11-28T11:01:28Z"
+      "publishedAt": "2026-11-28T14:01:26Z"
     }
   ]
 }
